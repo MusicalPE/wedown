@@ -15,7 +15,7 @@
  * Copyright (c) 2026 음악적체육인. 사용 조건은 https://github.com/MusicalPE/wedown 의 LICENSE 를 봐 주세요.
  *************************************************************/
 
-const SHELL_VERSION = 2;
+const SHELL_VERSION = 3;
 const APP_URL = 'https://musicalpe.github.io/wedown/';
 
 const SHEET_STUDENTS = 'Students';
@@ -34,6 +34,7 @@ const REP_M = 0.4;                       // 한 번에 바다로 40cm
 const TOKEN_TTL_SEC = 60 * 60;           // 관리자 토큰 1시간
 const ROOM_TTL_SEC = 6 * 60 * 60;        // 운동방 자료는 6시간 뒤 저절로 사라짐 (구글 캐시 최대값)
 const DEFAULT_ADMIN_PASSWORD = '1234';
+const DEFAULT_STUDENT_PASSWORD = '1234';   // 학생 비밀번호를 비워 두면 1234 (줄넘기 프로그램과 같음)
 
 /************ 설치 확인 화면 ************/
 function doGet(e) {
@@ -169,11 +170,12 @@ function studentRows_() {
   list.sort(function (a, b) { return num(a.grade) - num(b.grade) || num(a.cls) - num(b.cls) || num(a.number) - num(b.number) || a.order - b.order; });
   return list;
 }
-function getStudentsPublic() { return studentRows_().map(function (s) { return { id: s.id, number: s.number, name: s.name, grade: s.grade, cls: s.cls, hasPw: !!s.pw }; }); }
+function pwIsDefault_(h) { return !h || h === hash_(DEFAULT_STUDENT_PASSWORD); }
+function getStudentsPublic() { return studentRows_().map(function (s) { return { id: s.id, number: s.number, name: s.name, grade: s.grade, cls: s.cls, hasPw: true, pwDefault: pwIsDefault_(s.pw) }; }); }
 function cleanNum_(x) { const s = String(x == null ? '' : x).replace(/[^\d]/g, ''); return s ? Number(s) : ''; }
 
 // rows: [{grade, cls, number, name, pw}] (화면에서 엑셀 붙여넣기를 표로 나눠 보냄) — 옛 화면이 보내는 글(한 줄에 "1 김하늘")도 받음
-// 학년·반·번호·이름이 모두 같은 학생은 이미 있다고 보고 건너뜀. 비밀번호는 비워 두면 묻지 않음
+// 학년·반·번호·이름이 모두 같은 학생은 이미 있다고 보고 건너뜀. 비밀번호는 비워 두면 1234
 function addStudentsBulk(token, rows) {
   admin_(token);
   if (typeof rows === 'string') rows = rows.split(/\r?\n/).map(function (line) {
@@ -194,12 +196,12 @@ function addStudentsBulk(token, rows) {
     if (have[k]) { skipped++; return; }
     have[k] = 1;
     const pw = String(r.pw || '').trim();
-    out.push([Utilities.getUuid(), n, name, ++order, g, c, pw ? hash_(pw) : '']);
+    out.push([Utilities.getUuid(), n, name, ++order, g, c, hash_(pw || DEFAULT_STUDENT_PASSWORD)]);
   });
   if (out.length) sh.getRange(sh.getLastRow() + 1, 1, out.length, STUDENTS_HEADER_.length).setValues(out);
   return { added: out.length, skipped: skipped };
 }
-// o: {grade, cls, number, name, pw, clearPw} — pw를 넣으면 바꾸고, clearPw면 비밀번호를 없앰
+// o: {grade, cls, number, name, pw, clearPw} — pw를 넣으면 바꾸고, clearPw면 처음 비밀번호(1234)로 되돌림
 function updateStudent(token, id, o) {
   admin_(token);
   o = o || {};
@@ -207,7 +209,7 @@ function updateStudent(token, id, o) {
   for (let i = 1; i < v.length; i++) {
     if (String(v[i][0]) !== String(id)) continue;
     const name = String(o.name != null ? o.name : v[i][2]).trim().slice(0, 20) || v[i][2];
-    const pw = o.clearPw ? '' : (o.pw ? hash_(String(o.pw).trim()) : v[i][6]);
+    const pw = o.clearPw ? hash_(DEFAULT_STUDENT_PASSWORD) : (o.pw ? hash_(String(o.pw).trim()) : v[i][6]);
     sh.getRange(i + 1, 2, 1, 2).setValues([[o.number != null ? cleanNum_(o.number) : v[i][1], name]]);
     sh.getRange(i + 1, 5, 1, 3).setValues([[o.grade != null ? cleanNum_(o.grade) : v[i][4], o.cls != null ? cleanNum_(o.cls) : v[i][5], pw]]);
     return { ok: true };
@@ -215,11 +217,11 @@ function updateStudent(token, id, o) {
   throw new Error('학생을 찾지 못했어요.');
 }
 function renameStudent(token, id, name, number) { return updateStudent(token, id, { name: name, number: number === '' ? null : number }); }
-// 학생 비밀번호 확인 (비밀번호를 정하지 않은 학생은 늘 통과)
+// 학생 비밀번호 확인 (예전에 비밀번호 없이 등록된 학생은 1234)
 function studentPwOk_(sid, pw) {
   const s = studentRows_().filter(function (x) { return x.id === String(sid); })[0];
   if (!s) throw new Error('학생 정보를 찾지 못했어요.');
-  return !s.pw || hash_(String(pw || '').trim()) === s.pw;
+  return hash_(String(pw || '').trim()) === (s.pw || hash_(DEFAULT_STUDENT_PASSWORD));
 }
 function checkStudentPw(sid, pw) { return { ok: studentPwOk_(sid, pw) }; }
 function deleteStudent(token, id) {
@@ -285,7 +287,7 @@ function getDashboard() {
   // 이번 주(월요일부터)
   const d = new Date(t + 'T12:00:00'), dow = (d.getDay() + 6) % 7, monday = shiftDate_(t, -dow);
   const by = {};
-  students.forEach(function (s) { by[s.id] = { id: s.id, name: s.name, number: s.number, grade: s.grade, cls: s.cls, hasPw: !!s.pw, total: 0, today: 0, week: 0, days: {} }; });
+  students.forEach(function (s) { by[s.id] = { id: s.id, name: s.name, number: s.number, grade: s.grade, cls: s.cls, hasPw: true, total: 0, today: 0, week: 0, days: {} }; });
   const todayList = [];
   let todayCount = 0;
   const wg = {}; GROUPS_.forEach(function (g) { wg[g[0]] = 0; });

@@ -235,7 +235,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.8.0', NEED_SHELL = 2, REP_M = 0.4;
+const VER = '0.8.1', NEED_SHELL = 3, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
@@ -374,7 +374,7 @@ function checkerUrl(student, task, room, back){
 }
 function loadMain(){
   rpc('getDashboard').then(function(d){
-    if ((d.settings.shell || 0) < NEED_SHELL) return showSetup('학교 시트의 껍데기(Shell.gs)를 <b>2판</b>으로 바꿔 주세요. 학년·반·학생 비밀번호가 새로 생겼어요.<br>학교 시트 → 확장 프로그램 → Apps Script 에 새 Shell.gs 를 통째로 붙여넣고 저장 → <b>배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포</b>. 주소·학생·기록은 그대로예요.');
+    if ((d.settings.shell || 0) < NEED_SHELL) return showSetup('학교 시트의 껍데기(Shell.gs)를 <b>3판</b>으로 바꿔 주세요. 학년·반·학생 비밀번호(처음 1234)가 새로 생겼어요.<br>학교 시트 → 확장 프로그램 → Apps Script 에 새 Shell.gs 를 통째로 붙여넣고 저장 → <b>배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포</b>. 주소·학생·기록은 그대로예요.');
     document.title = (d.settings.className ? d.settings.className + ' · ' : '') + '우리 Down';
     renderMain(d);
     clearTimeout(MAIN.timer); MAIN.timer = setTimeout(loadMain, 60000);
@@ -429,10 +429,10 @@ function renderAdmin(s, students, records){
     card('하루 안내 기준', '한 학생이 같은 종목을 하루에 이만큼 넘게 하려 하면 <b><u>몸 상태에 맞춰 무리하지 마세요</u></b> 안내가 떠요. 시간 운동은 2초를 1개로 셈해요.',
       '<label class="f">같은 종목 하루<select id="sLimit">' + opt([50, 80, 100, 150, 200], s.dayLimit, n('개')) + '</select></label>' + save('saveLimit'))) +
   pane('students',
-    card('학생 관리', '칸을 고치면 그 줄에 <b>저장</b> 버튼이 나와요(엔터로도 저장). 비밀번호는 바꿀 때만 넣어요. 지워도 그 학생의 기록은 학교 시트에 남아요.',
+    card('학생 관리', '칸을 고치면 그 줄에 <b>저장</b> 버튼이 나와요(엔터로도 저장). 학생 비밀번호는 처음에 <b>1234</b>이고, 바꿀 때만 넣어요. 지워도 그 학생의 기록은 학교 시트에 남아요.',
       (students.length ? '<div class="stbl"><table><thead><tr><th>학년</th><th>반</th><th>번호</th><th>이름</th><th>비밀번호</th><th></th></tr></thead><tbody>' + students.map(function(x){
         return '<tr data-id="' + esc(x.id) + '"><td><input data-k="grade" inputmode="numeric" value="' + esc(x.grade) + '"></td><td><input data-k="cls" inputmode="numeric" value="' + esc(x.cls) + '"></td><td><input data-k="number" inputmode="numeric" value="' + esc(x.number) + '"></td><td><input data-k="name" class="nm" value="' + esc(x.name) + '"></td>' +
-          '<td><input data-k="pw" type="password" autocomplete="new-password" placeholder="' + (x.hasPw ? '정해 둠 · 바꿀 때만' : '없음') + '">' + (x.hasPw ? '<label class="nopw"><input type="checkbox" data-k="clearPw">없애기</label>' : '') + '</td>' +
+          '<td><input data-k="pw" type="password" autocomplete="new-password" placeholder="' + (x.pwDefault ? '1234 (처음 그대로)' : '바꿈 · 바꿀 때만') + '">' + (x.pwDefault ? '' : '<label class="nopw"><input type="checkbox" data-k="clearPw">1234로 되돌리기</label>') + '</td>' +
           '<td class="acts"><button class="sv" data-save>저장</button><button data-del="' + esc(x.id) + '" data-name="' + esc(x.name) + '">지우기</button></td></tr>'; }).join('') + '</tbody></table></div>'
         : '<p class="hint">아직 등록된 학생이 없어요. <b>학생 등록</b>에서 붙여 넣어 주세요.</p>'))) +
   pane('register',
@@ -440,11 +440,11 @@ function renderAdmin(s, students, records){
       '<div class="arow"><button class="btn" id="tplCopy">엑셀 양식 복사</button><button class="btn" id="sampleFill">예시 넣어 보기</button></div>' +
       '<label class="f">붙여넣기<textarea id="bulk" class="mono" placeholder="학년&#9;반&#9;번호&#9;이름&#9;비밀번호(선택)&#10;6&#9;1&#9;3&#9;김하늘&#10;6&#9;1&#9;7&#9;박준우&#9;7777"></textarea></label>' +
       '<div id="pvWrap" style="display:none"><p class="hint" id="pvSum"></p><div class="stbl"><table class="pv"><thead><tr><th></th><th>학년</th><th>반</th><th>번호</th><th>이름</th><th>비밀번호</th><th>확인</th></tr></thead><tbody id="pvBody"></tbody></table></div></div>' +
-      '<p class="hint">비밀번호 칸이 비어 있으면 비밀번호 없이 등록돼요. 비밀번호를 정한 학생은 메인 화면·운동방에서 이름을 누른 뒤 비밀번호를 넣어야 시작할 수 있어요(친구 이름으로 기록하는 것을 막아요). 이미 등록된 학생(학년·반·번호·이름이 같은)은 저절로 빠져요.</p>' +
+      '<p class="hint">비밀번호 칸이 비어 있으면 <b>1234</b>로 등록돼요. 학생은 메인 화면·운동방에서 이름을 누른 뒤 비밀번호를 넣어야 시작할 수 있어요(친구 이름으로 기록하는 것을 막아요). 이미 등록된 학생(학년·반·번호·이름이 같은)은 저절로 빠져요.</p>' +
       '<div class="arow"><button class="btn primary" id="bulkAdd" disabled>등록</button><span class="ok" id="bulkOk"></span></div>') +
     card('한 명만 추가', '전학 온 학생처럼 한 명만 넣을 때 써요.',
       '<div class="row3"><label class="f">학년<input id="oGrade" inputmode="numeric"></label><label class="f">반<input id="oCls" inputmode="numeric"></label><label class="f">번호<input id="oNum" inputmode="numeric"></label></div>' +
-      '<div class="row2"><label class="f">이름<input id="oName" maxlength="20"></label><label class="f">비밀번호 (선택)<input id="oPw" type="password" autocomplete="new-password" placeholder="비우면 없음"></label></div>' +
+      '<div class="row2"><label class="f">이름<input id="oName" maxlength="20"></label><label class="f">비밀번호 (선택)<input id="oPw" type="password" autocomplete="new-password" placeholder="비우면 1234"></label></div>' +
       '<div class="arow"><button class="btn primary" id="oneAdd">추가</button><span class="ok" id="oneOk"></span></div>')) +
   pane('records',
     card('최근 기록', '최근 100개까지 보여요. 잘못 들어간 기록은 지울 수 있어요. 모든 기록은 학교 시트의 <b>Records</b> 탭에도 있어요.',
@@ -498,7 +498,7 @@ function renderAdmin(s, students, records){
     const ok = PV.rows.filter(function(r){ return !r.bad && !r.dup; });
     $('pvWrap').style.display = PV.rows.length ? 'block' : 'none';
     $('pvSum').innerHTML = '<b>' + ok.length + '명</b> 등록할 수 있어요' + (PV.rows.length - ok.length ? ' · 빠지는 줄 ' + (PV.rows.length - ok.length) + '개' : '');
-    $('pvBody').innerHTML = PV.rows.map(function(r, i){ return '<tr class="' + (r.bad || r.dup ? 'skip' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(r.grade || '') + '</td><td>' + esc(r.cls || '') + '</td><td>' + esc(r.number || '') + '</td><td><b>' + esc(r.name || r.raw || '') + '</b></td><td>' + (r.pw ? '정함' : '-') + '</td><td>' + (r.bad || r.dup || '등록') + '</td></tr>'; }).join('');
+    $('pvBody').innerHTML = PV.rows.map(function(r, i){ return '<tr class="' + (r.bad || r.dup ? 'skip' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(r.grade || '') + '</td><td>' + esc(r.cls || '') + '</td><td>' + esc(r.number || '') + '</td><td><b>' + esc(r.name || r.raw || '') + '</b></td><td>' + (r.pw ? '정함' : '1234') + '</td><td>' + (r.bad || r.dup || '등록') + '</td></tr>'; }).join('');
     $('bulkAdd').disabled = !ok.length;
   };
   $('bulk').oninput = preview;

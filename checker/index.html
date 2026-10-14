@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.1.1</title>
+<title>위 Down 맨몸 판정기 v0.1.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -255,7 +255,7 @@
    점핑잭: 두 손목이 어깨 위 + 두 발목이 어깨너비보다 넓게 = 벌림, 손 내리고 발 모으면 = 모음. 벌림→모음 1회 */
 /*JUDGE-START*/
 const LEVELS={
-  squat:{easy:0.45, normal:0.6, hard:0.78},     // 앉은 깊이(0 선 자세 ~ 1 허벅지 수평) 이만큼 넘어야 1회
+  squat:{easy:0.28, normal:0.4, hard:0.6},      // 앉은 깊이(0 선 자세 ~ 1 허벅지 수평) 이만큼 넘어야 1회
   jack:{easy:0.95, normal:1.15, hard:1.35}      // 발목 사이 거리 ÷ 어깨너비 가 이만큼 넘어야 '다리 벌림'
 };
 function Counter(){ this.resetBase(); }
@@ -270,34 +270,47 @@ function SquatJudge(level){ Counter.call(this); this.setLevel(level||'normal'); 
 SquatJudge.prototype=Object.create(Counter.prototype);
 SquatJudge.prototype.setLevel=function(l){ this.th=LEVELS.squat[l]||0.6; };
 SquatJudge.prototype.line=function(){ return this.th; };
-SquatJudge.prototype.reset=function(){ this.resetBase(); this.r0=null; this.rs=null; this.n=0; this.phase='up'; this.downT=0; this.maxPart=0; this.ready=false; };
+SquatJudge.prototype.reset=function(){ this.resetBase(); this.rebase(); this.moved=false; };
+// 기준(선 자세)을 처음부터 다시 잡음 — 시작할 때, 화면 밖으로 나갔다 왔을 때, 자리를 옮겼을 때
+SquatJudge.prototype.rebase=function(){ this.r0=null; this.rs=null; this.h0=null; this.hs=null; this.anc=null; this.n=0; this.phase='up'; this.downT=0; this.maxPart=0; this.ready=false; this.meter=0; };
 SquatJudge.prototype.push=function(t,lm){
   this.lastT=t; const v=i=>vis(lm,i);
   this.visible=v(11)||v(12)||v(0);
-  const legs=[[23,25,27],[24,26,28]].filter(([h,k,a])=>v(h)&&v(k)&&v(a));
+  // 화면 안에 실제로 보이는 관절만 씀 — 발이 화면 밖으로 나가면 모델이 짐작한 위치로 잘못 셈
+  const inF=i=>lm[i]&&(lm[i].visibility===undefined||lm[i].visibility>0.55)&&lm[i].y>0.01&&lm[i].y<0.985&&lm[i].x>0.01&&lm[i].x<0.99;
+  const legs=[[23,25,27],[24,26,28]].filter(([h,k,a])=>inF(h)&&inF(k)&&inF(a)&&lm[a].y-lm[k].y>0.02&&lm[a].y>lm[h].y);
   this.full=legs.length>0;
-  if(!legs.length) return this.state();
-  const rs=legs.map(([h,k,a])=>{ const ak=lm[a].y-lm[k].y; return ak>0.02?(lm[a].y-lm[h].y)/ak:null; }).filter(x=>x!==null);
-  if(!rs.length) return this.state();
-  const r=rs.reduce((s,x)=>s+x,0)/rs.length;
+  if(!this.full){ if(this.n) this.rebase(); return this.state(); }
+  const avg=f=>legs.reduce((s,g)=>s+f(g),0)/legs.length;
+  const ay=avg(([h,k,a])=>lm[a].y), ax=avg(([h,k,a])=>lm[a].x);
+  // 발 위치(바닥)가 기준 — 스쿼트를 해도 발은 그대로라서, 발이 움직였으면 자리를 옮긴 것(다가오거나 물러남)
+  if(this.anc&&(Math.abs(ay-this.anc.y)>0.045||Math.abs(ax-this.anc.x)>0.08)){ this.rebase(); this.moved=true; }
+  if(!this.anc) this.anc={x:ax,y:ay}; else { this.anc.x+=(ax-this.anc.x)*0.05; this.anc.y+=(ay-this.anc.y)*0.05; }
+  // 깊이 두 가지: ① 엉덩이가 무릎 높이 쪽으로 온 정도  ② 발에서 엉덩이까지 높이가 줄어든 정도
+  const r=avg(([h,k,a])=>(lm[a].y-lm[h].y)/(lm[a].y-lm[k].y));
+  const hgt=avg(([h,k,a])=>lm[a].y-lm[h].y);
   this.rs=this.rs===null?r:this.rs+(r-this.rs)*0.5;
-  if(this.r0===null) this.r0=this.rs;
-  if(this.rs>this.r0) this.r0+=(this.rs-this.r0)*0.3;                         // 더 곧게 서면 바로 기준을 올림
-  else if(this.phase==='up'&&this.meter<0.15) this.r0+=(this.rs-this.r0)*0.01; // 서 있을 때만 아주 천천히 맞춤
-  this.n++; this.ready=this.n>15;
-  const span=Math.max(0.35,this.r0-1);
-  this.meter=Math.max(0,Math.min(1.3,(this.r0-this.rs)/span));
+  this.hs=this.hs===null?hgt:this.hs+(hgt-this.hs)*0.5;
+  if(this.r0===null){ this.r0=this.rs; this.h0=this.hs; }
+  const standing=this.phase==='up'&&this.meter<0.15;
+  if(this.rs>this.r0) this.r0+=(this.rs-this.r0)*0.3; else if(standing) this.r0+=(this.rs-this.r0)*0.01;
+  if(this.hs>this.h0) this.h0+=(this.hs-this.h0)*0.3; else if(standing) this.h0+=(this.hs-this.h0)*0.01;
+  this.n++; this.ready=this.n>15; if(this.ready) this.moved=false;
+  const dR=(this.r0-this.rs)/Math.max(0.35,this.r0-1);
+  const dH=(this.h0-this.hs)/(0.45*this.h0);
+  this.meter=Math.max(0,Math.min(1.3,(dR+dH)/2));
   if(!this.ready) return this.state();
   const d=this.meter;
   if(this.phase==='up'){
     if(d>this.th){ this.phase='down'; this.downT=t; }
-    else { if(d>this.maxPart) this.maxPart=d; if(d<0.12){ if(this.maxPart>0.28) this.hint(t,'shallow'); this.maxPart=0; } }
-  } else if(d<0.2){
+    else { if(d>this.maxPart) this.maxPart=d; if(d<0.1){ if(this.maxPart>this.th*0.55) this.hint(t,'shallow'); this.maxPart=0; } }
+  } else if(d<0.15){
     this.phase='up'; this.maxPart=0;
     if(t-this.downT>=0.3) this.rep(t); else this.hint(t,'fast');
   }
   return this.state();
 };
+SquatJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this); s.moved=this.moved; return s; };
 
 function JackJudge(level){ Counter.call(this); this.setLevel(level||'normal'); this.reset(); }
 JackJudge.prototype=Object.create(Counter.prototype);
@@ -332,7 +345,7 @@ JackJudge.prototype.push=function(t,lm){
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.1.1', REP_M=0.4;
+const VER='0.1.2', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
@@ -438,8 +451,8 @@ function paint(st,t){
     if(st.count>0&&st.count%10===0) celebrate(st.count); }
   const s=$('status'), recent=t-st.whyT<1.6, set=(txt,c)=>{ s.textContent=txt; s.className='status '+c; };
   if(!st.visible) set('카메라 앞에 서 주세요','wait');
-  else if(!st.full) set(ex==='squat'?'엉덩이·무릎·발목이 다 보이게 서요':'머리부터 발까지 다 보이게 서요','wait');
-  else if(!st.ready) set('똑바로 서서 잠깐 기다려요','wait');
+  else if(!st.full) set(ex==='squat'?'발까지 다 보이게 조금 뒤로 물러서요':'머리부터 발까지 다 보이게 서요','wait');
+  else if(!st.ready) set(st.moved?'자리가 바뀌었어요 — 똑바로 서서 잠깐만':'똑바로 서서 잠깐 기다려요','wait');
   else if(recent&&st.why==='shallow') set('조금 더 깊이 앉아요!','hint');
   else if(recent&&st.why==='legs') set('다리도 벌려요!','hint');
   else if(recent&&st.why==='arms') set('팔도 머리 위로 올려요!','hint');

@@ -58,11 +58,8 @@
   .names button{min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font-weight:700;font-size:15px;padding:0 4px}
   .names button.on{background:var(--sea);border-color:var(--sea);color:#fff}
   .picker{display:flex;flex-direction:column;gap:10px}
-  .pstep{display:flex;align-items:center;gap:8px}
-  .pstep > b{font-size:12px;color:var(--sea-ink);width:28px;flex:none}
-  .pseg{display:flex;flex-wrap:wrap;gap:4px;background:var(--soft);border-radius:12px;padding:4px;flex:1}
-  .pseg button{min-height:40px;min-width:56px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:var(--ink2);font-weight:700;font-size:15px;cursor:pointer}
-  .pseg button.on{background:var(--navy);color:#fff}
+  .psel{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px}
+  .psel select{min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--soft);padding:0 12px;font-size:16px;font-weight:700;color:var(--navy)}
   .pwin::placeholder{letter-spacing:0;font-size:16px}
   .names button small{font-size:12px;color:var(--muted);margin-right:4px;font-weight:700}
   .names button.on small{color:#DFF5F8}
@@ -249,7 +246,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.8.3', NEED_SHELL = 4, REP_M = 0.4;
+const VER = '0.8.4', NEED_SHELL = 4, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
@@ -270,9 +267,10 @@ function nameGrid(list, cur){
   const classes = []; inG.forEach(function(s){ if (classes.indexOf(gv(s.cls)) < 0) classes.push(gv(s.cls)); });
   if (classes.indexOf(PICK.c) < 0) PICK.c = classes.length === 1 ? classes[0] : '';
   let h = '<div id="names" class="picker">';
-  if (grades.length > 1) h += '<div class="pstep"><b>학년</b><div class="pseg">' + grades.map(function(g){ return '<button data-pg="' + esc(g) + '" class="' + (g === PICK.g ? 'on' : '') + '">' + (g ? esc(g) + '학년' : '그 밖') + '</button>'; }).join('') + '</div></div>';
+  const sels = (grades.length > 1 ? '<select id="pickG" aria-label="학년"><option value="">학년 고르기</option>' + grades.map(function(g){ return '<option value="' + esc(g) + '"' + (g === PICK.g ? ' selected' : '') + '>' + (g ? esc(g) + '학년' : '그 밖') + '</option>'; }).join('') + '</select>' : '') +
+    (classes.length > 1 && (PICK.g !== '' || grades.length === 1) ? '<select id="pickC" aria-label="반"><option value="">반 고르기</option>' + classes.map(function(c){ return '<option value="' + esc(c) + '"' + (c === PICK.c ? ' selected' : '') + '>' + (c ? esc(c) + '반' : '그 밖') + '</option>'; }).join('') + '</select>' : '');
+  if (sels) h += '<div class="psel">' + sels + '</div>';
   if (PICK.g !== '' || grades.length === 1) {
-    if (classes.length > 1) h += '<div class="pstep"><b>반</b><div class="pseg">' + classes.map(function(c){ return '<button data-pc="' + esc(c) + '" class="' + (c === PICK.c ? 'on' : '') + '">' + (c ? esc(c) + '반' : '그 밖') + '</button>'; }).join('') + '</div></div>';
     if (PICK.c !== '' || classes.length === 1) {
       const ss = inG.filter(function(s){ return gv(s.cls) === PICK.c; });
       h += '<div class="names">' + ss.map(function(s){ return '<button data-sid="' + esc(s.id) + '" data-name="' + esc(s.name) + '" class="' + (s.id === cur ? 'on' : '') + '">' + (gv(s.number) ? '<small>' + esc(s.number) + '</small>' : '') + esc(s.name) + '</button>'; }).join('') + '</div>';
@@ -282,8 +280,8 @@ function nameGrid(list, cur){
 }
 function bindPick(redraw){
   const save = function(){ try { localStorage.setItem('wd_pick', JSON.stringify(PICK)); } catch (e) {} };
-  document.querySelectorAll('[data-pg]').forEach(function(b){ b.onclick = function(){ PICK.g = b.getAttribute('data-pg'); PICK.c = ''; save(); redraw(); }; });
-  document.querySelectorAll('[data-pc]').forEach(function(b){ b.onclick = function(){ PICK.c = b.getAttribute('data-pc'); save(); redraw(); }; });
+  if ($('pickG')) $('pickG').onchange = function(){ PICK.g = this.value; PICK.c = ''; save(); redraw(); };
+  if ($('pickC')) $('pickC').onchange = function(){ PICK.c = this.value; save(); redraw(); };
 }
 function exSeg(cur, idp){ return '<div class="segg">' + GROUPS.map(function(g){ return '<div class="sgrp"><b>' + g[0] + '</b><div class="seg seg4">' + g[1].map(function(k){ return '<button data-' + idp + '="' + k + '" class="' + (k === cur ? 'on' : '') + '">' + EXN[k] + '</button>'; }).join('') + '</div></div>'; }).join('') + '</div>'; }
 const Q = {}; new URLSearchParams(location.search).forEach(function(v, k){ Q[k] = v; });
@@ -391,9 +389,9 @@ function renderMain(d){
       '</div>' +
       '<section class="ropes"><div class="title"><h2>다이빙 줄</h2><span>한 사람 한 줄, 내려간 만큼 줄이 길어져요 · 오늘 한 사람은 청록색</span></div>' +
         (students.length ? '<div id="ropeArea"></div>' : '<div class="empty">학생을 등록하면 여기에 한 사람씩 다이빙 줄이 생겨요</div>') + '</section>' +
-      '<section class="card go"><div class="head"><h2>오늘 운동하기</h2><span class="plan">' + (isT(MAIN.ex) ? secLabel(st.plankSec || 30) : st.reps + '회') + ' × ' + st.sets + '세트 · 쉬기 ' + st.rest + '초</span></div>' +
+      '<section class="card go"><div class="head"><h2>나 Down</h2><span class="plan">' + (isT(MAIN.ex) ? secLabel(st.plankSec || 30) : st.reps + '회') + ' × ' + st.sets + '세트 · 쉬기 ' + st.rest + '초</span></div>' +
         exSeg(MAIN.ex, 'mex') +
-        (students.length ? '<p class="hint">내 이름을 누르고 카메라로 시작해요</p>' + nameGrid(students, MAIN.sid) : '<p class="hint">아직 등록된 학생이 없어요. 관리자 메뉴에서 학생을 등록해 주세요.</p>') +
+        (students.length ? '<p class="hint">' + (students.some(function(s){ return gv(s.grade) || gv(s.cls); }) ? '학년·반을 고르고 ' : '') + '내 이름을 누르고 카메라로 시작해요</p>' + nameGrid(students, MAIN.sid) : '<p class="hint">아직 등록된 학생이 없어요. 관리자 메뉴에서 학생을 등록해 주세요.</p>') +
         (sel && sel.hasPw ? '<input class="pwin" id="stuPw" type="password" inputmode="numeric" autocomplete="off" placeholder="내 비밀번호"><span class="err" id="pwErr"></span>' : '') +
         '<button class="btn primary" id="goCam" ' + (sel ? '' : 'disabled') + '>' + (sel ? esc(sel.name) + ', 카메라로 시작하기' : '이름을 먼저 골라요') + '</button></section>' +
     '</div>' +
@@ -473,7 +471,7 @@ function renderAdmin(s, students, records){
     card('우리 반 이름', '메인 화면 맨 위에 보여요. 예: <b><u>햇살초 6-1 위다운</u></b>', '<label class="f">반 이름<input id="sClass" value="' + esc(s.className) + '" maxlength="40"></label>' + save('saveClass')) +
     card('오늘의 한마디', '메인 화면 아래쪽 바다 속 카드에 보여요. 비워 두면 날마다 저절로 바뀌어요.', '<label class="f">한마디 (120자까지)<input id="sMsg" value="' + esc(s.message) + '" maxlength="120" placeholder="비우면 자동"></label>' + save('saveMsg'))) +
   pane('plan',
-    card('기본 운동 계획', '메인 화면 "오늘 운동하기"로 열 때 판정기에 미리 정해지는 횟수·세트·쉬는 시간이에요. 운동방 과제는 보낼 때 따로 정해요.',
+    card('기본 운동 계획', '메인 화면 "나 Down"에서 열 때 판정기에 미리 정해지는 횟수·세트·쉬는 시간이에요. 운동방 과제는 보낼 때 따로 정해요.',
       '<div class="row3"><label class="f">한 세트 횟수<select id="sReps">' + opt([5, 8, 10, 12, 15, 20, 25, 30], s.reps, n('회')) + '</select></label>' +
       '<label class="f">세트 수<select id="sSets">' + opt([1, 2, 3, 4, 5], s.sets, n('세트')) + '</select></label>' +
       '<label class="f">세트 사이 쉬기<select id="sRest">' + opt([10, 15, 20, 30, 45, 60], s.rest, n('초')) + '</select></label></div>' +

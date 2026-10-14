@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.2.0</title>
+<title>위 Down 맨몸 판정기 v0.3.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -102,6 +102,8 @@
   .steps li>span{flex:none;width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800;margin-top:1px}
   .cover .small{font-size:13px;color:var(--muted)}
   .err{color:#B2412A;font-weight:700;font-size:14px}
+  .who{margin:0;padding:14px 16px;border-radius:16px;background:var(--sea-soft);color:var(--navy);font-size:17px;text-align:center}
+  a.hbtn{display:inline-flex;align-items:center;text-decoration:none;color:var(--ink2);background:var(--card);border:1px solid var(--line);border-radius:14px;font-weight:700}
 
   .main > .cd{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;background:var(--card);border-radius:inherit}
   .cdBox{text-align:center;padding:12px}
@@ -256,7 +258,7 @@
   <p class="deep" id="endDepth"></p>
   <p class="warnLine" id="endWarn" hidden></p>
   <p class="saved" id="endSaved"></p>
-  <div class="row"><button class="primary" id="endAgain">한 번 더</button><button id="endClose">닫기</button></div>
+  <div class="row"><button class="primary" id="endRetry" hidden>다시 보내기</button><button class="primary" id="endAgain">한 번 더</button><button id="endClose">닫기</button></div>
 </div></div>
 
 <div class="modal" id="logModal"><div class="box">
@@ -420,7 +422,7 @@ JackJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this)
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.2.0', REP_M=0.4;
+const VER='0.3.0', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
@@ -431,6 +433,17 @@ const EX={
 };
 const Q=new URLSearchParams(location.search);
 let ex=Q.get('ex')==='jack'?'jack':'squat', level='normal';
+/* 학교 연결 모드: 학교 메인·운동방에서 이름을 골라 열면 s(학교 시트)·sid(학생)·계획이 주소에 실려 옴 */
+const LINK={s:Q.get('s')||'', sid:Q.get('sid')||'', name:Q.get('name')||'', room:Q.get('room')||'', task:Q.get('task')||'', back:''};
+LINK.on=/^https:\/\/script\.google\.com\/|^http:\/\/(localhost|127\.0\.0\.1)/.test(LINK.s)&&!!LINK.sid;
+try{ const b=new URL(Q.get('back')||'',location.href); if(b.origin===location.origin) LINK.back=b.toString(); }catch(e){}
+function srpc(fn,args,retried){
+  return fetch(LINK.s,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:args||[]}),redirect:'follow'})
+    .then(r=>{ if(!r.ok) throw Object.assign(new Error('학교 시트 응답 오류 ('+r.status+')'),{retry:true}); return r.json(); },e=>{ e.retry=true; throw e; })
+    .then(j=>{ if(!j.ok) throw new Error(j.error||'요청 실패'); return j.result; })
+    .catch(e=>{ if(!e.retry||retried) throw e; return new Promise(ok=>setTimeout(ok,1500)).then(()=>srpc(fn,args,true)); });
+}
+function roomSignal(finished){ if(LINK.on&&LINK.room) srpc('roomProgress',[LINK.room,LINK.sid,LINK.task,S.done.length,!!finished]).catch(()=>{}); }
 let judge=null;
 function makeJudge(){ judge=ex==='jack'?new JackJudge(level):new SquatJudge(level); }
 function applyEx(){
@@ -516,10 +529,12 @@ function loop(){
 
 /* ---------- 운동 계획(횟수·세트·쉬는 시간)과 진행 ---------- */
 const S={mode:'idle', set:0, sets:3, reps:10, rest:10, done:[], offset:0, until:0, shown:-1, early:false};
+function setSel(id,v,unit){ const el=$(id); if(![...el.options].some(o=>+o.value===+v)){ const o=document.createElement('option'); o.value=v; o.textContent=id==='pRest'?v+'초':v; el.appendChild(o); } el.value=String(v); }
 function loadPlan(){ let p=null; try{ p=JSON.parse(localStorage.getItem('wedown.plan.'+ex)||'null'); }catch(e){}
-  p=p||{reps:10,sets:3,rest:10}; $('pReps').value=p.reps; $('pSets').value=p.sets; $('pRest').value=p.rest; readPlan(); }
+  if(LINK.on) p={reps:+Q.get('reps')||10, sets:+Q.get('sets')||3, rest:+Q.get('rest')||10};
+  p=p||{reps:10,sets:3,rest:10}; setSel('pReps',p.reps); setSel('pSets',p.sets); setSel('pRest',p.rest); readPlan(); }
 function readPlan(){ S.reps=+$('pReps').value; S.sets=+$('pSets').value; S.rest=+$('pRest').value;
-  try{ localStorage.setItem('wedown.plan.'+ex,JSON.stringify({reps:S.reps,sets:S.sets,rest:S.rest})); }catch(e){} if(S.mode==='idle') showSet(); }
+  if(!LINK.on) try{ localStorage.setItem('wedown.plan.'+ex,JSON.stringify({reps:S.reps,sets:S.sets,rest:S.rest})); }catch(e){} if(S.mode==='idle') showSet(); }
 ['pReps','pSets','pRest'].forEach(id=>$(id).onchange=readPlan);
 const active=()=>S.mode==='count'||S.mode==='set'||S.mode==='rest';
 function setCount(){ return S.mode==='set'?Math.min(S.reps,judge.count-S.offset):0; }
@@ -528,7 +543,7 @@ function sessionTotal(){ return S.done.reduce((a,b)=>a+b,0)+setCount(); }
 /* 기록장 — 지금은 이 기기에 저장 (학교 기록 페이지가 생기면 그쪽으로도 보냄) */
 const today=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 function readLog(){ try{ return JSON.parse(localStorage.getItem('wedown.log')||'[]'); }catch(e){ return []; } }
-const DAY_LIMIT=100;   // 하루에 같은 종목을 이만큼 넘게 하면 '무리하지 마세요' 안내
+let dayLimit=100;   // 하루에 같은 종목을 이만큼 넘게 하면 '무리하지 마세요' 안내 (학교 연결 때는 학교 설정을 따름)
 function todayTotal(x){ return readLog().filter(r=>r.d===today()&&r.ex===x).reduce((a,r)=>a+(r.total||0),0); }
 function saveLog(rec){ const l=readLog(); l.push(rec); try{ localStorage.setItem('wedown.log',JSON.stringify(l.slice(-300))); }catch(e){}
   if(Q.get('mode')==='post'&&window.opener){ try{ window.opener.postMessage({type:'wedown-result',...rec,ver:VER},'*'); }catch(e){} } }
@@ -537,10 +552,12 @@ function say(txt){ if(!$('snd').checked||!window.speechSynthesis) return; try{ s
 function overlay(lab,num,sub,skip){ $('cd').hidden=false; $('cdLab').textContent=lab; $('cdNum').textContent=num; $('cdSub').textContent=sub||''; $('cdSkip').hidden=!skip; }
 function hideOverlay(){ $('cd').hidden=true; }
 
-function startSession(){
+async function startSession(){
   readPlan();
-  const done=todayTotal(ex), plan=S.reps*S.sets;
-  if(done+plan>DAY_LIMIT){ $('warnText').textContent='오늘 '+EX[ex].obj+' 벌써 '+done+'개 했어요. 이번까지 하면 '+(done+plan)+'개로 '+DAY_LIMIT+'개를 넘어요. 몸 상태에 맞춰 무리하지 마세요.'; $('warnModal').classList.add('on'); return; }
+  let done=todayTotal(ex);
+  if(LINK.on){ $('btnStart').disabled=true; try{ const r=await srpc('getStudentToday',[LINK.sid,ex]); done=r.total; dayLimit=r.limit||100; }catch(e){} $('btnStart').disabled=false; }
+  const plan=S.reps*S.sets;
+  if(done+plan>dayLimit){ $('warnText').textContent=(LINK.name?LINK.name+', ':'')+'오늘 '+EX[ex].obj+' 벌써 '+done+'개 했어요. 이번까지 하면 '+(done+plan)+'개로 '+dayLimit+'개를 넘어요. 몸 상태에 맞춰 무리하지 마세요.'; $('warnModal').classList.add('on'); return; }
   begin();
 }
 function begin(){
@@ -561,6 +578,7 @@ function endSet(){
   S.done.push(S.reps); beep(523,0.12,0.2); setTimeout(()=>beep(784,0.2,0.2),130); bubbleBurst(40);
   const b=$('burst'); b.textContent=S.set+'세트 끝!'; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
   if(S.set>=S.sets){ finish(); return; }
+  roomSignal(false);
   S.mode='rest'; S.until=performance.now()+S.rest*1000; S.shown=-1;
   overlay('쉬는 시간',S.rest,'다음은 '+(S.set+1)+'세트 · 숨을 고르고 물도 마셔요',true); say(S.set+'세트 끝. 쉬어요');
 }
@@ -568,24 +586,33 @@ function finish(early){
   if(early&&S.mode==='set'){ const c=setCount(); if(c>0) S.done.push(c); }
   S.early=!!early||S.done.length<S.sets; S.mode='done'; running=false; hideOverlay(); setButtons();
   const total=S.done.reduce((a,b)=>a+b,0);
-  if(total>0) saveLog({d:today(), t:new Date().toTimeString().slice(0,5), ex, target:S.reps, sets:S.sets, reps:S.done.slice(), total, m:+(total*REP_M).toFixed(1)});
+  if(total>0) saveLog({d:today(), t:new Date().toTimeString().slice(0,5), ex, target:S.reps, sets:S.sets, reps:S.done.slice(), total, m:+(total*REP_M).toFixed(1), who:LINK.name||''});
   const n=todayTotal(ex);
+  if(LINK.on){ sendSchool(total); roomSignal(!S.early); }
   $('endTitle').textContent=S.early?'여기까지 했어요':'끝까지 해냈어요!';
   $('endBig').innerHTML=total+'<small> 회</small>';
   $('endSets').innerHTML=S.done.map((c,i)=>'<span>'+(i+1)+'세트 '+c+'회</span>').join('')||'<span>기록이 없어요</span>';
   $('endDepth').textContent='바다로 '+(total*REP_M).toFixed(1)+'m 내려왔어요';
-  $('endSaved').textContent=total>0?'기록장에 담았어요':'한 번도 세지 않아서 기록하지 않았어요';
-  $('endWarn').hidden=!(total>0&&n>DAY_LIMIT);
-  $('endWarn').textContent='오늘 '+EX[ex].obj+' 모두 '+n+'개 했어요. '+DAY_LIMIT+'개가 넘었으니 몸 상태에 맞춰 무리하지 마세요.';
+  if(!LINK.on){ $('endSaved').textContent=total>0?'기록장에 담았어요':'한 번도 세지 않아서 기록하지 않았어요'; showDayWarn(n,total); }
   $('endModal').classList.add('on'); say(S.early?'수고했어요':'끝! 수고했어요');
   $('status').textContent='끝 — 시작을 누르면 다시 해요'; $('status').className='status idle';
+}
+function showDayWarn(n,total){ $('endWarn').hidden=!(total>0&&n>dayLimit); $('endWarn').textContent=(LINK.name?LINK.name+', ':'')+'오늘 '+EX[ex].obj+' 모두 '+n+'개 했어요. '+dayLimit+'개가 넘었으니 몸 상태에 맞춰 무리하지 마세요.'; }
+let pendingSave=null;
+function sendSchool(total){
+  if(!total){ $('endSaved').textContent='한 번도 세지 않아서 기록하지 않았어요'; $('endRetry').hidden=true; showDayWarn(0,0); return; }
+  pendingSave=[LINK.sid,ex,S.reps,S.sets,S.done.slice()];
+  $('endSaved').textContent='학교 기록으로 보내는 중…'; $('endRetry').hidden=true; $('endClose').disabled=true;
+  srpc('saveRecord',pendingSave).then(r=>{ pendingSave=null; $('endSaved').textContent='학교 기록에 담았어요 · 바다가 '+(total*REP_M).toFixed(1)+'m 더 깊어졌어요'; showDayWarn(r.today,total); })
+    .catch(e=>{ $('endSaved').textContent='학교로 보내지 못했어요: '+e.message; $('endRetry').hidden=false; })
+    .finally(()=>{ $('endClose').disabled=false; });
 }
 function abort(){ S.mode='idle'; running=false; hideOverlay(); setButtons(); resetView(); }
 function setButtons(){
   const on=active();
   $('btnStart').textContent=on?'그만하기':'시작'; $('btnStart').classList.toggle('warn',on); $('btnStart').classList.toggle('primary',!on);
-  ['pReps','pSets','pRest','level'].forEach(id=>$(id).disabled=on);
-  $('tabSquat').disabled=$('tabJack').disabled=on;
+  ['pReps','pSets','pRest','level'].forEach(id=>$(id).disabled=on||(LINK.on&&id!=='level'));
+  $('tabSquat').disabled=$('tabJack').disabled=on||LINK.on;
 }
 setInterval(()=>{
   const now=performance.now();
@@ -670,7 +697,8 @@ $('btnReset').onclick=()=>{ abort(); $('manual').value=''; };
 $('warnGo').onclick=begin;
 $('warnStop').onclick=()=>$('warnModal').classList.remove('on');
 $('endAgain').onclick=()=>{ $('endModal').classList.remove('on'); startSession(); };
-$('endClose').onclick=()=>{ $('endModal').classList.remove('on'); abort(); };
+$('endClose').onclick=()=>{ if(pendingSave&&!confirm('아직 학교로 보내지 못한 기록이 있어요. 그래도 닫을까요?')) return; $('endModal').classList.remove('on'); if(LINK.on&&LINK.back){ location.href=LINK.back; return; } abort(); };
+$('endRetry').onclick=()=>{ if(!pendingSave) return; const t=pendingSave[4].reduce((a,b)=>a+b,0); sendSchool(t); };
 $('btnLog').onclick=showLog;
 $('logClose').onclick=()=>$('logModal').classList.remove('on');
 $('btnFlip').onclick=async()=>{ facing=facing==='user'?'environment':'user'; try{ await openCam(); }catch(e){} };
@@ -680,6 +708,17 @@ document.addEventListener('fullscreenchange',()=>{ $('btnFull').textContent=docu
 $('manual').oninput=diff;
 document.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if(e.code==='Space'){ e.preventDefault(); $('btnStart').click(); } if(e.key==='f'||e.key==='F') $('btnFull').click(); });
 applyEx();
+if(LINK.on){
+  document.title=LINK.name+' · 위 Down 판정기';
+  $('sub').textContent=LINK.name+' · 끝나면 학교 기록에 담겨요';
+  document.querySelector('.tabs').hidden=true; document.querySelector('.exPick').hidden=true;
+  $('endAgain').hidden=!!LINK.room; $('endClose').textContent=LINK.back?'돌아가기':'닫기';
+  const who=document.createElement('p'); who.className='who';
+  who.innerHTML='<b>'+LINK.name.replace(/[<>&"]/g,'')+'</b> · '+EX[ex].name+' '+(+Q.get('reps')||10)+'회 × '+(+Q.get('sets')||3)+'세트'+(LINK.room?' · 운동방 '+LINK.room.replace(/\D/g,''):'');
+  document.querySelector('.exPick').after(who);
+  if(LINK.back){ const a=document.createElement('a'); a.className='hbtn backlink'; a.href=LINK.back; a.textContent='돌아가기'; $('btnFlip').after(a); }
+  setButtons();
+}
 </script>
 </body>
 </html>

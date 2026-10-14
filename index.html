@@ -54,20 +54,27 @@
   .dark .gbar em{font-style:normal;text-align:right;color:#C9E3EC}
   .dark .gnote{font-size:13px;color:var(--pale);margin:2px 0 0}
   .seg4 button{font-size:14px;padding:0 4px}
-  .names{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px}
+  .names{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
   .names button{min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font-weight:700;font-size:15px;padding:0 4px}
   .names button.on{background:var(--sea);border-color:var(--sea);color:#fff}
-  .ngroups{display:flex;flex-direction:column;gap:10px}
-  .ngrp > b{display:block;font-size:12px;color:var(--sea-ink);padding:0 0 4px 4px}
+  .picker{display:flex;flex-direction:column;gap:10px}
+  .pstep{display:flex;align-items:center;gap:8px}
+  .pstep > b{font-size:12px;color:var(--sea-ink);width:28px;flex:none}
+  .pseg{display:flex;flex-wrap:wrap;gap:4px;background:var(--soft);border-radius:12px;padding:4px;flex:1}
+  .pseg button{min-height:40px;min-width:56px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:var(--ink2);font-weight:700;font-size:15px;cursor:pointer}
+  .pseg button.on{background:var(--navy);color:#fff}
+  .pwin::placeholder{letter-spacing:0;font-size:16px}
+  .names button small{font-size:12px;color:var(--muted);margin-right:4px;font-weight:700}
+  .names button.on small{color:#DFF5F8}
   .pwin{min-height:48px;border-radius:12px;border:1px solid var(--line);padding:8px 14px;font-size:20px;letter-spacing:.2em;text-align:center;color:var(--ink);background:#fff;width:100%;box-sizing:border-box}
   .madeby{font-size:13px;color:var(--pale);text-align:right}
   .madeby b{color:#fff}
 
   /* 위쪽 밝은 바다 */
   .surface{background:var(--sky);padding:20px 20px 28px}
-  .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,400px);grid-template-areas:"cards go" "gauge go";grid-template-rows:auto 1fr;gap:18px 22px;align-items:start;margin-top:16px}
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,400px);grid-template-areas:"cards go" "gauge go" "ropes go";grid-template-rows:auto auto 1fr;gap:18px 22px;align-items:start;margin-top:16px}
   .hero > .tri{grid-area:cards;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
-  .hero > .gauge{grid-area:gauge} .hero > .go{grid-area:go}
+  .hero > .gauge{grid-area:gauge} .hero > .go{grid-area:go} .hero > .ropes{grid-area:ropes;min-width:0}
   .note{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;margin-top:16px;background:#fff;border:1px solid var(--line);border-left:5px solid var(--sea);border-radius:14px;padding:10px 16px}
   .note > div:first-child{flex:1 1 300px;min-width:0}
   .note .ne{font-size:12px;font-weight:700;color:var(--sea-ink)}
@@ -79,7 +86,7 @@
   .tri.top .recs{display:flex;flex-direction:column;gap:8px;max-height:190px;overflow:auto}
   .tri.top .rec{gap:8px} .tri.top .rec span:first-child{width:38px;font-size:12px} .tri.top .rec span:nth-child(3){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
   @media (max-width:1100px){ .hero > .tri{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))} }
-  @media (max-width:900px){ .hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"gauge" "go" "cards"} }
+  @media (max-width:900px){ .hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"gauge" "go" "ropes" "cards"} }
   .gauge{display:flex;gap:18px;flex:999 1 560px;min-width:0}
   .ruler{width:58px;flex:none;position:relative;border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
   .ruler i{display:block}
@@ -98,13 +105,20 @@
   .go .plan{font-size:13px;color:var(--ink2);font-weight:700}
 
   /* 다이빙 줄 */
-  .ropes{background:#fff;padding:24px 20px 28px}
+  .ropes{background:#fff;border-radius:24px;padding:18px 18px 16px;box-shadow:0 10px 30px rgba(14,58,99,.08)}
   .ropes .title{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:14px}
-  .ropes h2{margin:0;font-size:22px;font-weight:900}
+  .ropes h2{margin:0;font-size:20px;font-weight:900}
   .ropes .title span{font-size:14px;color:var(--ink2)}
   .rbox{overflow-x:auto}
   .rchart{position:relative;height:360px;border-radius:18px;background:#E9F5F8;overflow:hidden}
   .rchart .surf{position:absolute;left:0;right:0;top:40px;height:4px;background:#5FB8D6}
+  .rtools{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 12px}
+  .rseg{display:flex;gap:4px;background:var(--soft);border-radius:12px;padding:4px;flex-wrap:wrap}
+  .rseg button{min-height:36px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:var(--ink2);font-weight:700;font-size:13px;cursor:pointer}
+  .rseg button.on{background:var(--navy);color:#fff}
+  .rchart.tight .rcol b{writing-mode:vertical-rl;height:56px;font-size:13px;letter-spacing:-.02em;text-overflow:clip}
+  .rchart.tight .rcol .dot{width:14px;height:14px;border-width:2px;margin-top:-3px}
+  .rchart.tight .rcol .m{font-size:10px}
   .rchart .tick{position:absolute;left:0;right:0;border-top:1px dashed #B8D7E1}
   .rchart .tick span{position:absolute;left:12px;top:-18px;font-size:12px;color:var(--muted);font-weight:700}
   .rcols{position:absolute;left:60px;right:16px;top:8px;bottom:0;display:grid}
@@ -222,7 +236,7 @@
     .anav .nsep,.anav a{display:none}
   }
   @media (max-width:700px){
-    .surface,.ropes,.abyss,.page{padding-left:12px;padding-right:12px}
+    .surface,.abyss,.page{padding-left:12px;padding-right:12px} .ropes{padding:14px 10px}
     .brand b{font-size:22px} .brand svg{width:38px;height:38px}
     .gauge{gap:10px;flex-wrap:wrap} .ruler{width:40px} .rlabels{width:170px;font-size:12px} .depthbig{flex:1 1 100%;order:-1}
     .rcols{left:44px}
@@ -235,7 +249,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.8.2', NEED_SHELL = 4, REP_M = 0.4;
+const VER = '0.8.3', NEED_SHELL = 4, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
@@ -243,13 +257,33 @@ const isT = function(x){ return x === 'plank' || x === 'balance'; };   // 시간
 const secLabel = function(v){ return v >= 60 ? (v / 60 | 0) + '분' + (v % 60 ? ' ' + v % 60 + '초' : '') : v + '초'; };
 const taskText = function(t){ return EXN[t.ex] + ' ' + (isT(t.ex) ? secLabel(t.reps) : t.reps + '회') + ' × ' + t.sets + '세트'; };
 const grpName = function(s){ return (s.grade !== '' && s.grade != null ? s.grade + '학년 ' : '') + (s.cls !== '' && s.cls != null ? s.cls + '반' : ''); };
-// 이름 단추: 학년·반이 둘 이상이면 반마다 묶어서 보여 줌
+// 이름 고르기: 학년 → 반 → 번호+이름 (학년·반이 하나뿐이면 그 단계는 건너뜀)
+let PICK = { g: '', c: '' };
+try { PICK = JSON.parse(localStorage.getItem('wd_pick') || '{}') || {}; } catch (e) {}
+const gv = function(x){ return x === '' || x == null ? '' : String(x); };
 function nameGrid(list, cur){
-  const btn = function(s){ return '<button data-sid="' + esc(s.id) + '" data-name="' + esc(s.name) + '" class="' + (s.id === cur ? 'on' : '') + '">' + esc(s.name) + '</button>'; };
-  const keys = []; const by = {};
-  list.forEach(function(s){ const k = grpName(s).trim(); if (!by[k]) { by[k] = []; keys.push(k); } by[k].push(s); });
-  if (keys.length < 2) return '<div class="names" id="names">' + list.map(btn).join('') + '</div>';
-  return '<div id="names" class="ngroups">' + keys.map(function(k){ return '<div class="ngrp"><b>' + esc(k || '반 없음') + '</b><div class="names">' + by[k].map(btn).join('') + '</div></div>'; }).join('') + '</div>';
+  const me = list.find(function(s){ return s.id === cur; });
+  if (me) { PICK.g = gv(me.grade); PICK.c = gv(me.cls); }
+  const grades = []; list.forEach(function(s){ if (grades.indexOf(gv(s.grade)) < 0) grades.push(gv(s.grade)); });
+  if (grades.indexOf(PICK.g) < 0) PICK.g = grades.length === 1 ? grades[0] : '';
+  const inG = list.filter(function(s){ return gv(s.grade) === PICK.g; });
+  const classes = []; inG.forEach(function(s){ if (classes.indexOf(gv(s.cls)) < 0) classes.push(gv(s.cls)); });
+  if (classes.indexOf(PICK.c) < 0) PICK.c = classes.length === 1 ? classes[0] : '';
+  let h = '<div id="names" class="picker">';
+  if (grades.length > 1) h += '<div class="pstep"><b>학년</b><div class="pseg">' + grades.map(function(g){ return '<button data-pg="' + esc(g) + '" class="' + (g === PICK.g ? 'on' : '') + '">' + (g ? esc(g) + '학년' : '그 밖') + '</button>'; }).join('') + '</div></div>';
+  if (PICK.g !== '' || grades.length === 1) {
+    if (classes.length > 1) h += '<div class="pstep"><b>반</b><div class="pseg">' + classes.map(function(c){ return '<button data-pc="' + esc(c) + '" class="' + (c === PICK.c ? 'on' : '') + '">' + (c ? esc(c) + '반' : '그 밖') + '</button>'; }).join('') + '</div></div>';
+    if (PICK.c !== '' || classes.length === 1) {
+      const ss = inG.filter(function(s){ return gv(s.cls) === PICK.c; });
+      h += '<div class="names">' + ss.map(function(s){ return '<button data-sid="' + esc(s.id) + '" data-name="' + esc(s.name) + '" class="' + (s.id === cur ? 'on' : '') + '">' + (gv(s.number) ? '<small>' + esc(s.number) + '</small>' : '') + esc(s.name) + '</button>'; }).join('') + '</div>';
+    } else h += '<p class="hint">반을 골라요</p>';
+  } else h += '<p class="hint">학년을 골라요</p>';
+  return h + '</div>';
+}
+function bindPick(redraw){
+  const save = function(){ try { localStorage.setItem('wd_pick', JSON.stringify(PICK)); } catch (e) {} };
+  document.querySelectorAll('[data-pg]').forEach(function(b){ b.onclick = function(){ PICK.g = b.getAttribute('data-pg'); PICK.c = ''; save(); redraw(); }; });
+  document.querySelectorAll('[data-pc]').forEach(function(b){ b.onclick = function(){ PICK.c = b.getAttribute('data-pc'); save(); redraw(); }; });
 }
 function exSeg(cur, idp){ return '<div class="segg">' + GROUPS.map(function(g){ return '<div class="sgrp"><b>' + g[0] + '</b><div class="seg seg4">' + g[1].map(function(k){ return '<button data-' + idp + '="' + k + '" class="' + (k === cur ? 'on' : '') + '">' + EXN[k] + '</button>'; }).join('') + '</div></div>'; }).join('') + '</div>'; }
 const Q = {}; new URLSearchParams(location.search).forEach(function(v, k){ Q[k] = v; });
@@ -293,7 +327,33 @@ function showSetup(msg){
 }
 
 /* ===================== 메인 ===================== */
-let MAIN = { ex: 'squat', sid: '', data: null, timer: 0 };
+let MAIN = { ex: 'squat', sid: '', data: null, timer: 0, rgrp: '', rsort: 'num' };
+try { MAIN.rgrp = localStorage.getItem('wd_rgrp') || ''; MAIN.rsort = localStorage.getItem('wd_rsort') || 'num'; } catch (e) {}
+// 다이빙 줄: 화면 폭에 맞춰 줄 간격을 정함 (적으면 넓게, 많으면 좁게·이름 세로, 아주 많을 때만 옆으로 밀기)
+function ropeChart(all){
+  const groups = []; all.forEach(function(s){ const k = grpName(s).trim(); if (groups.indexOf(k) < 0) groups.push(k); });
+  if (groups.length < 2 || groups.indexOf(MAIN.rgrp) < 0) MAIN.rgrp = groups.length < 2 ? '' : MAIN.rgrp;
+  let list = all.filter(function(s){ return !MAIN.rgrp || grpName(s).trim() === MAIN.rgrp; });
+  if (MAIN.rsort === 'deep') list = list.slice().sort(function(a, b){ return b.total - a.total; });
+  const maxM = Math.max(10, ...list.map(function(s){ return s.total * REP_M; }));
+  const step = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find(function(x){ return maxM / x <= 3; }) || 2000;
+  const scaleMax = Math.ceil(maxM / step) * step;
+  const W = ($('ropeArea') ? $('ropeArea').clientWidth : Math.min(document.documentElement.clientWidth, 1232) - 40) - (innerWidth <= 700 ? 60 : 76);
+  const colW = W / Math.max(1, list.length);
+  const tight = colW < 54, tiny = colW < 22;
+  const chartTop = tight ? 64 : 34, chartH = 290;
+  let ticks = ''; for (let v = step; v <= scaleMax; v += step) ticks += '<div class="tick" style="top:' + (chartTop + v / scaleMax * chartH + 6) + 'px"><span>' + v + 'm</span></div>';
+  const chip = function(k, lab){ return '<button data-rgrp="' + esc(k) + '" class="' + (MAIN.rgrp === k ? 'on' : '') + '">' + esc(lab) + '</button>'; };
+  const tools = '<div class="rtools">' + (groups.length > 1 ? '<div class="rseg">' + chip('', '전체') + groups.map(function(k){ return chip(k, k || '반 없음'); }).join('') + '</div>' : '') +
+    '<div class="rseg">' + ['num', 'deep'].map(function(k){ return '<button data-rsort="' + k + '" class="' + (MAIN.rsort === k ? 'on' : '') + '">' + (k === 'num' ? '번호순' : '깊은 순') + '</button>'; }).join('') + '</div></div>';
+  return tools + '<div class="rbox"><div class="rchart' + (tight ? ' tight' : '') + '" style="height:' + (chartTop + chartH + 40) + 'px' + (tiny ? ';min-width:' + (list.length * 24 + 76) + 'px' : '') + '"><div class="surf" style="top:' + (chartTop + 6) + 'px"></div>' + ticks +
+    '<div class="rcols" style="grid-template-columns:repeat(' + list.length + ',minmax(0,1fr))">' + list.map(function(s){ const sm = s.total * REP_M; return '<div class="rcol' + (s.today ? ' today' : '') + '"><b title="' + esc(s.name) + '">' + esc(s.name) + '</b><div class="line" style="height:' + Math.max(2, sm / scaleMax * chartH) + 'px"></div><div class="dot"></div><div class="m">' + meters(s.total) + (tight ? '' : 'm') + '</div></div>'; }).join('') + '</div></div></div>';
+}
+let ROPE_RS = 0; addEventListener('resize', function(){ clearTimeout(ROPE_RS); ROPE_RS = setTimeout(function(){ if (MAIN.data && $('ropeArea')) { $('ropeArea').innerHTML = ropeChart(MAIN.data.students); bindRope(); } }, 200); });
+function bindRope(){
+  document.querySelectorAll('[data-rgrp]').forEach(function(b){ b.onclick = function(){ MAIN.rgrp = b.getAttribute('data-rgrp'); try { localStorage.setItem('wd_rgrp', MAIN.rgrp); } catch (e) {} $('ropeArea').innerHTML = ropeChart(MAIN.data.students); bindRope(); }; });
+  document.querySelectorAll('[data-rsort]').forEach(function(b){ b.onclick = function(){ MAIN.rsort = b.getAttribute('data-rsort'); try { localStorage.setItem('wd_rsort', MAIN.rsort); } catch (e) {} $('ropeArea').innerHTML = ropeChart(MAIN.data.students); bindRope(); }; });
+}
 function renderMain(d){
   MAIN.data = d;
   const st = d.settings, m = d.classTotal * REP_M;
@@ -302,13 +362,8 @@ function renderMain(d){
   const students = d.students;
   if (MAIN.sid && !students.some(function(s){ return s.id === MAIN.sid; })) MAIN.sid = '';
   const sel = students.find(function(s){ return s.id === MAIN.sid; });
-  const maxM = Math.max(10, ...students.map(function(s){ return s.total * REP_M; }));
-  const step = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find(function(x){ return maxM / x <= 3; }) || 2000;
-  const scaleMax = Math.ceil(maxM / step) * step;
-  const chartTop = 34, chartH = 290;
   const lead = function(o, unit){ return o ? '<b>' + esc(o.name) + ' · ' + o.value + unit + '</b>' : '<b style="color:var(--pale)">아직 없어요</b>'; };
   const msg = st.message || MESSAGES[new Date().getDate() % MESSAGES.length];
-  let ticks = ''; for (let v = step; v <= scaleMax; v += step) ticks += '<div class="tick" style="top:' + (chartTop + v / scaleMax * chartH + 6) + 'px"><span>' + v + 'm</span></div>';
   $('app').innerHTML =
   '<div class="surface"><div class="wrap">' +
     '<header class="top">' + brand(st.className) + '<span class="sp"></span>' +
@@ -334,6 +389,8 @@ function renderMain(d){
           '<div class="n">' + (next ? next[1].replace(/^[\d,]+m /, '') + ' ' + fmt(next[0]) + 'm까지 <em>' + meters(next[0] / REP_M - d.classTotal) + 'm</em>' : '<em>마리아나 해구 바닥에 닿았어요!</em>') + (d.classToday ? ' · 오늘 +' + meters(d.classToday) + 'm' : '') + '</div>' +
           '<div class="s">모두 ' + fmt(d.classTotal) + '번, 한 번에 40cm씩 함께 내려왔어요</div></div>' +
       '</div>' +
+      '<section class="ropes"><div class="title"><h2>다이빙 줄</h2><span>한 사람 한 줄, 내려간 만큼 줄이 길어져요 · 오늘 한 사람은 청록색</span></div>' +
+        (students.length ? '<div id="ropeArea"></div>' : '<div class="empty">학생을 등록하면 여기에 한 사람씩 다이빙 줄이 생겨요</div>') + '</section>' +
       '<section class="card go"><div class="head"><h2>오늘 운동하기</h2><span class="plan">' + (isT(MAIN.ex) ? secLabel(st.plankSec || 30) : st.reps + '회') + ' × ' + st.sets + '세트 · 쉬기 ' + st.rest + '초</span></div>' +
         exSeg(MAIN.ex, 'mex') +
         (students.length ? '<p class="hint">내 이름을 누르고 카메라로 시작해요</p>' + nameGrid(students, MAIN.sid) : '<p class="hint">아직 등록된 학생이 없어요. 관리자 메뉴에서 학생을 등록해 주세요.</p>') +
@@ -341,16 +398,13 @@ function renderMain(d){
         '<button class="btn primary" id="goCam" ' + (sel ? '' : 'disabled') + '>' + (sel ? esc(sel.name) + ', 카메라로 시작하기' : '이름을 먼저 골라요') + '</button></section>' +
     '</div>' +
   '</div></div>' +
-  '<div class="ropes"><div class="wrap"><div class="title"><h2>다이빙 줄</h2><span>한 사람 한 줄, 내려간 만큼 줄이 길어져요 · 오늘 한 사람은 청록색</span></div>' +
-    (students.length ? '<div class="rbox"><div class="rchart" style="min-width:' + Math.max(320, students.length * 58 + 80) + 'px"><div class="surf"></div>' + ticks +
-      '<div class="rcols" style="grid-template-columns:repeat(' + students.length + ',minmax(0,1fr))">' + students.map(function(s){ const sm = s.total * REP_M; return '<div class="rcol' + (s.today ? ' today' : '') + '"><b>' + esc(s.name) + '</b><div class="line" style="height:' + Math.max(2, sm / scaleMax * chartH) + 'px"></div><div class="dot"></div><div class="m">' + meters(s.total) + 'm</div></div>'; }).join('') + '</div></div></div>'
-      : '<div class="empty">학생을 등록하면 여기에 한 사람씩 다이빙 줄이 생겨요</div>') +
-  '</div></div>' +
   '<div class="abyss"><div class="wrap">' +
   '<p class="madeby">Made by <b>음악적체육인</b> · 위 Down v' + VER + '</p></div></div>';
 
+  if ($('ropeArea')) { $('ropeArea').innerHTML = ropeChart(students); bindRope(); }
+  bindPick(function(){ MAIN.sid = ''; renderMain(MAIN.data); });
   document.querySelectorAll('[data-mex]').forEach(function(b){ b.onclick = function(){ MAIN.ex = b.getAttribute('data-mex'); renderMain(MAIN.data); }; });
-  document.querySelectorAll('#names button').forEach(function(b){ b.onclick = function(){ MAIN.sid = b.getAttribute('data-sid'); renderMain(MAIN.data); if ($('stuPw')) $('stuPw').focus(); }; });
+  document.querySelectorAll('#names [data-sid]').forEach(function(b){ b.onclick = function(){ MAIN.sid = b.getAttribute('data-sid'); renderMain(MAIN.data); if ($('stuPw')) $('stuPw').focus(); }; });
   const goNow = function(){ location.href = checkerUrl(sel, { ex: MAIN.ex, reps: isT(MAIN.ex) ? (st.plankSec || 30) : st.reps, sets: st.sets, rest: st.rest }, '', link('main')); };
   if ($('stuPw')) $('stuPw').onkeydown = function(e){ if (e.key === 'Enter') $('goCam').click(); };
   if ($('goCam')) $('goCam').onclick = function(){ if (!sel) return; if (!sel.hasPw) return goNow();
@@ -599,10 +653,11 @@ function askCode(msg){
 function pickName(info){
   $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:12px">' + brand(info.className + ' 운동방') + '<h2>내 이름을 눌러요</h2>' +
     nameGrid(info.students, '') + '<div id="pwStep" style="display:none;flex-direction:column;gap:10px"><p class="hint" id="pwWho"></p><input class="pwin" id="joinPw" type="password" inputmode="numeric" autocomplete="off" placeholder="내 비밀번호"><button class="btn primary" id="pwGo">들어가기</button></div><span class="err" id="joinErr"></span></div></div></div>';
-  document.querySelectorAll('#names button').forEach(function(b){ b.onclick = function(){
+  bindPick(function(){ pickName(info); });
+  document.querySelectorAll('#names [data-sid]').forEach(function(b){ b.onclick = function(){
     const s = info.students.find(function(x){ return x.id === b.getAttribute('data-sid'); });
     JOIN.sid = s.id; JOIN.name = s.name;
-    document.querySelectorAll('#names button').forEach(function(x){ x.classList.toggle('on', x === b); });
+    document.querySelectorAll('#names [data-sid]').forEach(function(x){ x.classList.toggle('on', x === b); });
     if (!s.hasPw) { store('wd_join_sid', JOIN.sid); store('wd_join_name', JOIN.name); store('wd_join_pw', null); return joined(); }
     $('pwStep').style.display = 'flex'; $('pwWho').innerHTML = '<b>' + esc(s.name) + '</b>, 비밀번호를 넣어요'; $('joinErr').textContent = ''; $('joinPw').value = ''; $('joinPw').focus();
   }; });

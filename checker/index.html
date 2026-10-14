@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.5.0</title>
+<title>위 Down 맨몸 판정기 v0.5.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -139,6 +139,8 @@
   .burst{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) scale(.6);font-size:56px;font-weight:900;color:var(--navy);opacity:0;pointer-events:none;z-index:31;text-shadow:0 4px 20px rgba(255,255,255,.9)}
   .burst.on{animation:burst 1.2s ease-out} @keyframes burst{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
 
+  /* 운동하는 동안: 종목·설정 칸을 숨겨 카메라와 숫자를 크게 */
+  body.running .tabs, body.running header .hbtn:not(.backlink), body.running footer label, body.running #btnReset, body.running .madeby, body.running .compare, body.running .meter-l{display:none!important}
   @media (max-height:720px){ header .sub{display:none} .stat{padding:8px 14px} .screen{gap:10px} }
   /* ---------- 세로 화면(핸드폰·세운 태블릿) — 내 모습(왼쪽)과 횟수(오른쪽)를 한 줄에, 시작 버튼은 아래에 붙음 ---------- */
   @media (max-width:1100px) and (orientation:portrait){
@@ -172,6 +174,10 @@
     .madeby{order:9;margin-left:auto;font-size:12px;padding:5px 10px}
     .fspacer{display:none}
     .burst{font-size:40px}
+    body.running .stage{grid-template-columns:1fr;margin:0}
+    body.running .pip{width:min(92vw,52vh)}
+    body.running .main{padding:10px 8px}
+    body.running .count{font-size:min(14vh,26vw)}
     .cdNum{font-size:min(16vh,26vw)} .cdLab{font-size:16px} .cdSub{font-size:12px} #cdSkip{min-height:40px;padding:6px 12px;font-size:13px;margin-top:8px}
   }
 </style>
@@ -618,11 +624,20 @@ PlankJudge.prototype.push=function(t,lm){
   let good=false, pose='lie';
   if(this.full){
     const S=lm[J.S],H=lm[J.H],F=lm[A];
-    const horiz=Math.abs(F.y-S.y)<0.5*Math.abs(F.x-S.x)&&Math.abs(F.x-S.x)>0.12;
-    const support=(seen(lm,J.E)&&lm[J.E].y>S.y)||(seen(lm,J.W)&&lm[J.W].y>S.y);
+    const horiz=Math.abs(F.y-S.y)<0.8*Math.abs(F.x-S.x)&&Math.abs(F.x-S.x)>0.12;   // 팔을 세우면 비스듬한 경사로 — 40°까지는 버티기 자세로 봄
+    // 버티기: 팔꿈치(또는 손)가 어깨 아래 바닥을 짚고, 어깨가 바닥에서 위팔 길이의 절반 넘게 들려 있어야 함 — 바닥에 엎드려 누운 것과 구분
+    const sup=[J.E,J.W].filter(i=>seen(lm,i)).map(i=>lm[i]);
+    const floorY=sup.length?Math.max(...sup.map(p=>p.y)):S.y;
+    const upper=seen(lm,J.E)?Math.max(0.03,dist(S,lm[J.E])):0.08;
+    const lifted=floorY-S.y>0.5*upper;
+    const support=sup.length>0&&lifted;
+    this.lifted=lifted;
     const len=Math.max(0.05,dist(S,F)), yl=S.y+(F.y-S.y)*((H.x-S.x)/((F.x-S.x)||1e-6)), off=(H.y-yl)/len;
     this.meter=horiz?Math.max(0,Math.min(1,1-Math.abs(off)/(this.tol*2)))*1.2:0;
-    if(!horiz||!support) pose='lie'; else if(off>this.tol) pose='sag'; else if(off<-this.tol) pose='pike'; else { pose='ok'; good=true; }
+    // 머리도 어깨~발끝 선의 연장선 가까이 (고개가 푹 숙거나 젖혀지면 알려 줌)
+    const hd=[7,8,0].find(i=>seen(lm,i)); let headOff=0;
+    if(hd!==undefined){ const P=lm[hd], yh=S.y+(F.y-S.y)*((P.x-S.x)/((F.x-S.x)||1e-6)); headOff=(P.y-yh)/len; }
+    if(!horiz) pose='lie'; else if(!support) pose='flat'; else if(off>this.tol) pose='sag'; else if(off<-this.tol) pose='pike'; else if(Math.abs(headOff)>this.tol*2.5) pose='head'; else { pose='ok'; good=true; }
   } else this.meter=0;
   this.pose=pose;
   if(good){ if(this.goodSince===null) this.goodSince=t; if(t-this.goodSince>=0.5) this.held+=dt; } else this.goodSince=null;
@@ -634,7 +649,7 @@ PlankJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.5.0', REP_M=0.4;
+const VER='0.5.1', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
@@ -647,7 +662,7 @@ const EX={
   situp:{name:'윗몸일으키기', obj:'윗몸일으키기를', lab:'지금까지 한 윗몸일으키기', meterL:'일어난 각도', meterR:'선을 넘으면 1회, 다시 누워야 다음 회', partK:'덜 일어난', sub:'누웠다가 상체를 충분히 일으키면 1회',
     steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 누워 <b>무릎을 세워요</b>. 머리부터 무릎까지 화면에 들어오게 해요.','등이 바닥에 닿게 누웠다가 <b>상체를 일으켜</b> 선을 넘으면 1회예요.','다시 누워야 다음 회를 세요. 덜 일어나면 <em>"조금 더 일어나요"</em>가 떠요.']},
   plank:{name:'플랭크', obj:'플랭크를', lab:'버틴 시간', meterL:'몸이 곧은 정도', meterR:'선을 넘는 동안 초가 올라가요', partK:'자세 고침', sub:'몸을 곧게 버티는 동안만 초가 올라가요',
-    steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 엎드려요. 머리부터 발까지 화면에 들어오게 해요.','팔꿈치(또는 손)로 바닥을 짚고 <b>머리~엉덩이~발끝을 한 줄로</b> 곧게 버텨요. 자세가 맞으면 초가 올라가요.','엉덩이가 처지거나 솟으면 초가 멈추고 알려 줘요. 바로잡으면 이어서 올라가요.']},
+    steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 엎드려요. 머리부터 발까지 화면에 들어오게 해요.','팔을 바닥에 <b>수직으로 세워</b>(또는 팔꿈치로) 짚고, <b>머리부터 발끝까지 비스듬한 한 줄</b>로 곧게 버텨요. 자세가 맞으면 초가 올라가요.','엉덩이가 처지거나 솟거나, 바닥에 엎드리면 초가 멈추고 알려 줘요. 바로잡으면 이어서 올라가요.']},
   burpee:{name:'버피', obj:'버피를', lab:'지금까지 한 버피', meterL:'엎드리기 → 일어나기 → 만세 점프', meterR:'세 단계를 다 하면 1회', partK:'덜 한', sub:'엎드려 버티기 → 일어나기 → 만세 점프까지 이어지면 1회',
     steps:['<b>옆으로</b> 서서 엎드렸을 때도 몸이 다 보이게 기기를 <b>3m쯤</b> 떨어뜨려 놓아요.','쪼그려 손 짚고 다리를 뒤로 뻗어 <b>엎드려 버티기</b> → 다리를 당겨 일어나며 <b>만세 점프</b>까지 하면 1회예요.','엎드리지 않거나 만세 점프 없이 일어나면 세지 않아요. 기준 <b>쉽게</b>는 점프를 보지 않아요.']},
   jack:{name:'점핑잭', obj:'점핑잭을', lab:'지금까지 한 점핑잭', meterL:'어깨 → 차렷 → 만세 → 차렷', meterR:'네 박자를 다 하면 1회', partK:'덜 한', sub:'어깨 높이 → 차렷 → 만세 → 차렷, 네 박자가 1회',
@@ -786,10 +801,11 @@ async function startSession(){
   if(done+plan>dayLimitFor()){ $('warnText').textContent=(LINK.name?LINK.name+', ':'')+'오늘 '+EX[ex].obj+' 벌써 '+done+(ex==='plank'?'초':'개')+' 했어요. 이번까지 하면 '+(done+plan)+(ex==='plank'?'초로 ':'개로 ')+dayLimitFor()+(ex==='plank'?'초를':'개를')+' 넘어요. 몸 상태에 맞춰 무리하지 마세요.'; $('warnModal').classList.add('on'); return; }
   begin();
 }
+function showStage(){ try{ const el=document.querySelector('.stage'), y=el.getBoundingClientRect().top+window.scrollY-8; if(Math.abs(window.scrollY-y)>20) window.scrollTo({top:y,behavior:'smooth'}); }catch(e){} }
 function begin(){
   $('warnModal').classList.remove('on'); $('endModal').classList.remove('on');
   S.set=1; S.done=[]; S.early=false; judge.reset(); t0=performance.now(); resetView(); running=true;
-  countdown(); setButtons();
+  countdown(); setButtons(); requestAnimationFrame(()=>requestAnimationFrame(showStage));
 }
 function countdown(){
   S.mode='count'; S.until=performance.now()+5000; S.shown=-1;
@@ -836,6 +852,7 @@ function sendSchool(total){
 function abort(){ S.mode='idle'; running=false; hideOverlay(); setButtons(); resetView(); }
 function setButtons(){
   const on=active();
+  document.body.classList.toggle('running',on);
   $('btnStart').textContent=on?'그만하기':'시작'; $('btnStart').classList.toggle('warn',on); $('btnStart').classList.toggle('primary',!on);
   ['pReps','pSets','pRest','level'].forEach(id=>$(id).disabled=on||(LINK.on&&id!=='level'));
   document.querySelectorAll('[data-ex]').forEach(b=>b.disabled=on||LINK.on);
@@ -869,7 +886,7 @@ function paint(st,t){
   const s=$('status'), recent=t-st.whyT<1.6, set=(txt,c)=>{ s.textContent=txt; s.className='status '+c; };
   if(S.mode==='count') set('곧 시작해요 — 자리를 잡아요','wait');
   else if(S.mode==='rest') set('쉬는 시간','idle');
-  else if(ex==='plank'&&S.mode==='set'){ if(!st.full) set('옆모습이 다 보이게 엎드려요','wait'); else if(st.good) set('잘 버티고 있어요!','good'); else if(st.pose==='sag') set('엉덩이가 처졌어요 — 배에 힘!','hint'); else if(st.pose==='pike') set('엉덩이를 조금 내려요','hint'); else if(st.pose==='ok') set('좋아요, 그대로!','good'); else set('옆으로 엎드려 팔꿈치로 버텨요','wait'); }
+  else if(ex==='plank'&&S.mode==='set'){ if(!st.full) set('옆모습이 다 보이게 엎드려요','wait'); else if(st.good) set('잘 버티고 있어요!','good'); else if(st.pose==='sag') set('엉덩이가 처졌어요 — 배에 힘!','hint'); else if(st.pose==='pike') set('엉덩이를 조금 내려요','hint'); else if(st.pose==='flat') set('팔을 세워 바닥을 짚고 몸을 들어 올려요','hint'); else if(st.pose==='head') set('고개도 몸과 한 줄로!','hint'); else if(st.pose==='ok') set('좋아요, 그대로!','good'); else set('옆으로 엎드려 팔꿈치로 버텨요','wait'); }
   else if(!st.visible) set('카메라 앞에 서 주세요','wait');
   else if(!st.full) set(ex==='jack'?'머리부터 발까지 다 보이게 서요':'발까지 다 보이게 조금 뒤로 물러서요','wait');
   else if(!st.ready) set(st.moved?'자리가 바뀌었어요 — 똑바로 서서 잠깐만':'똑바로 서서 잠깐 기다려요','wait');

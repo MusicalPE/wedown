@@ -135,6 +135,11 @@
   .wait{display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:700;color:var(--ink2);padding:18px}
   .wait i{width:12px;height:12px;border-radius:50%;background:var(--sea);animation:pulse 1.2s ease-in-out infinite}
   @keyframes pulse{50%{transform:scale(1.6);opacity:.4}}
+  .peers{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+  .peer{display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:12px;background:var(--soft);font-size:13px;font-weight:700;color:var(--ink2)}
+  .peer.done{background:var(--sea-soft);color:var(--navy)}
+  .peer span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .peer .segs i{height:6px}
   .warnbox{background:var(--warn-bg);color:var(--warn);font-weight:700;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.5}
   @media (max-width:700px){
     .surface,.ropes,.abyss,.page{padding-left:12px;padding-right:12px}
@@ -150,7 +155,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.3.0', NEED_SHELL = 1, REP_M = 0.4;
+const VER = '0.3.1', NEED_SHELL = 1, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭' };
 const Q = {}; new URLSearchParams(location.search).forEach(function(v, k){ Q[k] = v; });
 const APP = { shell: '' };
@@ -410,10 +415,21 @@ function showJoin(r){
   else if (mine && me.finished) body = '<div class="bigtask">끝! 잘했어요</div><p class="hint" style="text-align:center">' + EXN[t.ex] + ' ' + t.reps + '회 × ' + t.sets + '세트를 다 했어요. 다음 과제를 기다려요.</p><div class="wait"><i></i>다음 과제 기다리는 중</div>';
   else body = '<p class="hint" style="text-align:center">선생님이 보낸 과제</p><div class="bigtask">' + EXN[t.ex] + '<br>' + t.reps + '회 × ' + t.sets + '세트</div><p class="hint" style="text-align:center">쉬는 시간 ' + t.rest + '초' + (mine && me.setsDone ? ' · 지난번에 ' + me.setsDone + '세트까지 했어요' : '') + '</p><button class="btn sea" id="startTask" style="min-height:60px;font-size:20px">카메라로 시작하기</button>';
   $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:14px">' + brand('운동방 ' + JOIN.code) +
-    '<div style="display:flex;justify-content:space-between;align-items:center"><h2>' + esc(JOIN.name) + '</h2><button class="pill" id="notMe">내가 아니에요</button></div>' + body + '</div></div></div>';
+    '<div style="display:flex;justify-content:space-between;align-items:center"><h2>' + esc(JOIN.name) + '</h2><button class="pill" id="notMe">내가 아니에요</button></div>' + body + '</div>' +
+    peersCard(r.peers || [], t) + '</div></div>';
   $('notMe').onclick = function(){ store('wd_join_sid', null); store('wd_join_name', null); JOIN.sid = ''; loadJoin(); };
   if ($('startTask')) $('startTask').onclick = function(){ location.href = checkerUrl({ id: JOIN.sid, name: JOIN.name }, t, JOIN.code, link('join', { code: JOIN.code })); };
   JOIN.timer = setTimeout(function(){ rpc('roomPoll', [JOIN.code, JOIN.sid]).then(function(nr){ if (!nr.me) return joined(); showJoin(nr); }).catch(function(e){ askCode(e.message); }); }, 3000);
+}
+
+/* 함께 들어온 친구들 — 번호 순으로 고정(누가 빠른지 겨루는 게 아니라 함께 하는 걸 보여 줌) */
+function peersCard(peers, t){
+  if (!peers.length) return '';
+  const n = t ? t.sets : 0;
+  return '<div class="card" style="display:flex;flex-direction:column;gap:10px;padding:16px"><h2 style="font-size:16px">함께 하는 친구들 ' + peers.length + '명</h2><div class="peers">' + peers.map(function(p){
+    let segs = ''; for (let i = 1; i <= n; i++) segs += '<i class="' + ((p.finished || p.setsDone >= i) ? 'on' : '') + '"></i>';
+    return '<div class="peer' + (p.finished ? ' done' : '') + '"><span>' + esc(p.name) + (p.finished ? ' · 끝' : '') + '</span>' + (n ? '<div class="segs" style="grid-template-columns:repeat(' + n + ',minmax(0,1fr))">' + segs + '</div>' : '') + '</div>';
+  }).join('') + '</div></div>';
 }
 
 /* ===================== 길 찾기 ===================== */

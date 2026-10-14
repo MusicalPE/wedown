@@ -325,11 +325,22 @@ function roomJoin(code, sid) {
   cache_().put(k, JSON.stringify(m || { task: '', setsDone: 0, finished: false, at: Date.now() }), ROOM_TTL_SEC);
   return roomPoll(code, sid);
 }
+// 학생 기기가 3~5초마다 물어봄: 과제, 내 상태, 함께 들어온 친구들의 세트 완료 신호(번호 순 — 빠르기 비교가 아니라 '함께'를 보여 주려는 것)
 function roomPoll(code, sid) {
   const c = roomCheck_(code);
-  let task = null; try { task = JSON.parse(cache_().get('R_' + c + '_task') || 'null'); } catch (e) {}
-  let m = null; try { m = JSON.parse(cache_().get('R_' + c + '_m_' + sid) || 'null'); } catch (e) {}
-  return { task: task, me: m };
+  const st = studentRows_();
+  const got = cache_().getAll(['R_' + c + '_task'].concat(st.map(function (s) { return 'R_' + c + '_m_' + s.id; })));
+  let task = null; try { task = JSON.parse(got['R_' + c + '_task'] || 'null'); } catch (e) {}
+  let me = null;
+  const peers = [];
+  st.forEach(function (s) {
+    let m = null; try { m = JSON.parse(got['R_' + c + '_m_' + s.id] || 'null'); } catch (e) {}
+    if (s.id === String(sid)) { me = m; return; }
+    if (!m) return;
+    const cur = task && m.task === task.id;
+    peers.push({ name: s.name, setsDone: cur ? m.setsDone : 0, finished: cur ? !!m.finished : false });
+  });
+  return { task: task, me: me, peers: peers };
 }
 function roomProgress(code, sid, taskId, setsDone, finished) {
   const c = roomCheck_(code);

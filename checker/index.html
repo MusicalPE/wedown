@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.7.2</title>
+<title>위 Down 맨몸 판정기 v0.7.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -72,7 +72,13 @@
   .diff.ok{color:var(--sea-ink)} .diff.bad{color:#B2412A}
 
   .camSlot{display:flex;align-items:flex-end}
-  .pip{position:relative;width:min(30vw,46vh);aspect-ratio:3/4;border-radius:22px;overflow:hidden;background:#0B2236;border:6px solid #fff;box-shadow:var(--shadow);cursor:pointer}
+  /* 가로 화면(태블릿·노트북): 내 모습 칸을 높이 기준으로 크게, 모양은 실제 카메라 영상 비율 그대로 */
+  @media (orientation:landscape) and (min-height:601px){
+    .camSlot{align-items:center}
+    .pip{width:auto;height:min(58vh,560px);max-width:56vw}
+    body.running .pip{height:min(70vh,680px)}
+  }
+  .pip{position:relative;width:min(30vw,46vh);aspect-ratio:var(--cam-ar,3/4);border-radius:22px;overflow:hidden;background:#0B2236;border:6px solid #fff;box-shadow:var(--shadow);cursor:pointer}
   .pip video,.pip canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
   .pip .tag{position:absolute;left:10px;top:10px;background:rgba(14,42,68,.7);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px}
   .pip .fps{position:absolute;right:10px;top:10px;background:rgba(14,42,68,.5);color:#fff;font-size:11px;padding:3px 8px;border-radius:99px}
@@ -159,7 +165,7 @@
     .tabs button{min-height:34px!important;padding:4px 10px!important;font-size:13px!important}
     .stage{flex:none;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
     .camSlot{align-items:center}
-    .pip{aspect-ratio:4/3;width:auto;height:min(60vh,300px);border-width:4px}
+    .pip{width:auto;height:min(60vh,300px);max-width:58vw;border-width:4px}
     .main{padding:8px;gap:6px}
     .count{font-size:min(24vh,110px)}
     .depth{font-size:14px}
@@ -693,7 +699,12 @@ PlankJudge.prototype.push=function(t,lm){
     const sup=[J.E,J.W].filter(i=>seen(lm,i)).map(i=>lm[i]);
     const floorY=sup.length?Math.max(...sup.map(p=>p.y)):S.y;
     const upper=seen(lm,J.E)?Math.max(0.03,dist(S,lm[J.E])):0.08;
-    const lifted=floorY-S.y>0.5*upper;
+    // 팔이 기둥처럼 서 있어야 함: 어깨→팔꿈치(없으면 손목)가 아래로 곧게(수직에서 45° 안쪽) — 배를 대고 엎드리면 팔이 눕혀져 있어서 걸러짐
+    const P=seen(lm,J.E)?lm[J.E]:(seen(lm,J.W)?lm[J.W]:null);
+    const armUp=!!P&&(P.y-S.y)/Math.max(0.02,dist(S,P))>0.7;
+    // 어깨가 발끝보다 확실히 높아야 함(몸 길이의 6% 넘게) — 바닥에 붙으면 어깨와 발 높이가 같아짐
+    const slopeOk=(F.y-S.y)>0.06*Math.max(0.05,dist(S,F));
+    const lifted=floorY-S.y>0.5*upper&&armUp&&slopeOk;
     const support=sup.length>0&&lifted;
     this.lifted=lifted;
     const len=Math.max(0.05,dist(S,F)), yl=S.y+(F.y-S.y)*((H.x-S.x)/((F.x-S.x)||1e-6)), off=(H.y-yl)/len;
@@ -855,7 +866,7 @@ WallPushJudge.prototype.state=function(){ const s=Counter.prototype.state.call(t
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.7.2', REP_M=0.4;
+const VER='0.7.3', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
@@ -976,10 +987,15 @@ async function loadModel(){
   try{ landmarker=await mod.PoseLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL,delegate:'GPU'},runningMode:'VIDEO',numPoses:1}); }
   catch(e){ landmarker=await mod.PoseLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL,delegate:'CPU'},runningMode:'VIDEO',numPoses:1}); }
 }
+/* 내 모습 칸을 실제 카메라 영상 비율(가로 4:3, 세로 3:4 등)에 맞춤 — 잘려서 화면 밖으로 나간 것처럼 보이지 않게 */
+try{ matchMedia('(orientation: landscape)').addEventListener('change',()=>{ if(stream) openCam().catch(()=>{}); }); }catch(e){}   // 기기를 돌리면 카메라도 그 방향으로 다시 켬
+function fitCam(){ const w=video.videoWidth, h=video.videoHeight; if(w&&h) document.documentElement.style.setProperty('--cam-ar', w+'/'+h); }
 async function openCam(){
   if(stream) stream.getTracks().forEach(t=>t.stop());
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}},audio:false});
+  const land=innerWidth>innerHeight;
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:land?640:480},height:{ideal:land?480:640},frameRate:{ideal:30}},audio:false});
   video.srcObject=stream; await video.play();
+  fitCam(); video.onresize=fitCam;
   $('nocam').hidden=true;
   document.querySelectorAll('.pip video,.pip canvas').forEach(el=>el.style.transform=facing==='user'?'scaleX(-1)':'none');
 }

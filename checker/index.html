@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.1.4</title>
+<title>위 Down 맨몸 판정기 v0.2.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -103,6 +103,29 @@
   .cover .small{font-size:13px;color:var(--muted)}
   .err{color:#B2412A;font-weight:700;font-size:14px}
 
+  .main > .cd{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;background:var(--card);border-radius:inherit}
+  .cdBox{text-align:center;padding:12px}
+  .cdLab{font-size:clamp(20px,3.4vh,34px);font-weight:800;color:var(--sea-ink)}
+  .cdNum{font-size:min(24vh,20vw);font-weight:900;line-height:1;color:var(--navy);letter-spacing:-.05em}
+  .cdSub{font-size:clamp(14px,2.2vh,20px);color:var(--muted);font-weight:600;margin-top:6px}
+  #cdSkip{margin-top:16px}
+  .modal{position:fixed;inset:0;z-index:40;background:rgba(14,42,68,.45);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+  .modal.on{display:flex}
+  .modal .box{background:var(--card);border-radius:28px;padding:30px 30px 24px;max-width:520px;width:100%;display:flex;flex-direction:column;gap:12px;text-align:center;box-shadow:0 30px 80px rgba(14,42,68,.25);max-height:90vh;overflow:auto}
+  .modal h3{margin:0;font-size:clamp(24px,3.6vh,30px);font-weight:800;color:var(--navy)}
+  .modal p{margin:0;color:var(--ink2);line-height:1.6}
+  .modal .big{font-size:clamp(70px,13vh,110px);font-weight:900;color:var(--sea);line-height:1;letter-spacing:-.05em}
+  .modal .big small{font-size:.3em;color:var(--muted)}
+  .modal .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+  .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .chips span{padding:6px 12px;border-radius:99px;background:var(--sea-soft);color:var(--navy);font-weight:700;font-size:14px}
+  .deep{font-weight:700;color:var(--sea-ink)!important}
+  .warnLine{background:var(--amber-soft);color:#9A5B0B!important;font-weight:700;border-radius:14px;padding:10px 14px}
+  .saved{font-size:13px;color:var(--muted)!important}
+  .logList{list-style:none;margin:0;padding:0;text-align:left;display:flex;flex-direction:column;gap:6px;font-size:14px}
+  .logList li{padding:8px 12px;border-radius:12px;background:var(--soft);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+  .logList span{color:var(--muted)} .logList em{font-style:normal;font-weight:800;color:var(--sea-ink);margin-left:auto}
+  select:disabled{opacity:.5}
   #fx{position:fixed;inset:0;pointer-events:none;z-index:30;width:100%;height:100%}
   .burst{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) scale(.6);font-size:56px;font-weight:900;color:var(--navy);opacity:0;pointer-events:none;z-index:31;text-shadow:0 4px 20px rgba(255,255,255,.9)}
   .burst.on{animation:burst 1.2s ease-out} @keyframes burst{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
@@ -140,6 +163,7 @@
     .madeby{order:9;margin-left:auto;font-size:12px;padding:5px 10px}
     .fspacer{display:none}
     .burst{font-size:40px}
+    .cdNum{font-size:min(16vh,26vw)} .cdLab{font-size:16px} .cdSub{font-size:12px} #cdSkip{min-height:40px;padding:6px 12px;font-size:13px;margin-top:8px}
   }
 </style>
 </head>
@@ -163,6 +187,7 @@
       <button id="tabSquat" class="on">스쿼트</button>
       <button id="tabJack">점핑잭</button>
     </div>
+    <button class="hbtn" id="btnLog">기록장</button>
     <button class="hbtn" id="btnFull">전체 화면</button>
     <button class="hbtn" id="btnFlip">카메라 전환</button>
   </header>
@@ -170,6 +195,10 @@
   <main class="stage">
     <section class="card main" id="mainCard">
       <div class="wave" id="wave"><svg viewBox="0 0 200 16" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 Q12.5 2 25 14 T50 14 T75 14 T100 14 T125 14 T150 14 T175 14 T200 14 V16 H0Z" fill="#E3F4F6"/></svg></div>
+<div class="cd" id="cd" hidden><div class="cdBox">
+        <div class="cdLab" id="cdLab"></div><div class="cdNum" id="cdNum"></div><div class="cdSub" id="cdSub"></div>
+        <button id="cdSkip" hidden>바로 다음 세트</button>
+      </div></div>
       <div class="lab" id="lab">지금까지 한 스쿼트</div>
       <div class="count" id="count">0<small>회</small></div>
       <div class="depth" id="depth">바다로 0.0m 내려왔어요</div>
@@ -206,10 +235,36 @@
     <div class="fspacer"></div>
     <button class="primary" id="btnStart">시작</button>
     <button id="btnReset">처음부터</button>
+    <label>횟수 <select id="pReps"><option>5</option><option selected>10</option><option>12</option><option>15</option><option>20</option><option>25</option><option>30</option></select></label>
+    <label>세트 <select id="pSets"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
+    <label>쉬는 시간 <select id="pRest"><option value="10" selected>10초</option><option value="15">15초</option><option value="20">20초</option><option value="30">30초</option><option value="45">45초</option><option value="60">1분</option></select></label>
     <label>기준 <select id="level"><option value="easy">쉽게</option><option value="normal" selected>보통</option><option value="hard">엄격하게</option></select></label>
     <label>소리 <input type="checkbox" id="snd" checked></label>
   </footer>
 </div>
+
+<div class="modal" id="warnModal"><div class="box">
+  <h3>잠깐만요</h3>
+  <p id="warnText"></p>
+  <div class="row"><button class="primary" id="warnGo">괜찮아요, 할게요</button><button id="warnStop">오늘은 그만</button></div>
+</div></div>
+
+<div class="modal" id="endModal"><div class="box">
+  <h3 id="endTitle">끝까지 해냈어요!</h3>
+  <div class="big" id="endBig">0</div>
+  <div class="chips" id="endSets"></div>
+  <p class="deep" id="endDepth"></p>
+  <p class="warnLine" id="endWarn" hidden></p>
+  <p class="saved" id="endSaved"></p>
+  <div class="row"><button class="primary" id="endAgain">한 번 더</button><button id="endClose">닫기</button></div>
+</div></div>
+
+<div class="modal" id="logModal"><div class="box">
+  <h3>기록장</h3>
+  <p class="saved">이 기기에 저장된 최근 기록이에요</p>
+  <ul class="logList" id="logList"></ul>
+  <div class="row"><button id="logClose">닫기</button></div>
+</div></div>
 
 <canvas id="fx"></canvas>
 <div class="burst" id="burst"></div>
@@ -244,6 +299,7 @@
     <ol class="steps" id="steps"></ol>
     <div class="err" id="coverErr"></div>
     <button class="primary" id="btnCam">카메라 켜고 시작하기</button>
+    <p class="small">횟수·세트·쉬는 시간은 화면 아래에서 정해요. 시작을 누르면 5초 세고 1세트가 시작되고, 세트 사이에는 정한 만큼 쉬어요. 끝나면 기록장에 담겨요.</p>
     <p class="small">처음 열 때는 인터넷이 필요해요(관절 인식 모델 약 6MB). 한 번 받으면 브라우저가 기억해요.</p>
   </div>
 </div>
@@ -364,13 +420,13 @@ JackJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this)
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.1.4', REP_M=0.4;
+const VER='0.2.0', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
-  squat:{name:'스쿼트', lab:'지금까지 한 스쿼트', meterL:'앉은 깊이', meterR:'선을 넘고 일어나면 1회', partK:'덜 앉은', sub:'엉덩이가 무릎 높이 쪽으로 내려갔다 일어나야 1회',
+  squat:{name:'스쿼트', obj:'스쿼트를', lab:'지금까지 한 스쿼트', meterL:'앉은 깊이', meterR:'선을 넘고 일어나면 1회', partK:'덜 앉은', sub:'엉덩이가 무릎 높이 쪽으로 내려갔다 일어나야 1회',
     steps:['기기에서 <b>2~3m</b> 떨어져 <b>엉덩이·무릎·발목</b>이 다 보이게 서요. <b>옆으로 서면</b> 더 정확해요.','처음 <b>1초</b>는 똑바로 서 있어요. 서 있는 높이를 기준으로 잡아요.','엉덩이를 뒤로 빼며 앉았다가 <b>다 일어나면</b> 1회. 덜 앉으면 <em>"조금 더 깊이"</em>가 떠요.']},
-  jack:{name:'점핑잭', lab:'지금까지 한 점핑잭', meterL:'어깨 → 차렷 → 만세 → 차렷', meterR:'네 박자를 다 하면 1회', partK:'덜 한', sub:'어깨 높이 → 차렷 → 만세 → 차렷, 네 박자가 1회',
+  jack:{name:'점핑잭', obj:'점핑잭을', lab:'지금까지 한 점핑잭', meterL:'어깨 → 차렷 → 만세 → 차렷', meterR:'네 박자를 다 하면 1회', partK:'덜 한', sub:'어깨 높이 → 차렷 → 만세 → 차렷, 네 박자가 1회',
     steps:['<b>정면</b>을 보고 <b>머리부터 발까지</b> 다 보이게 서요. 옆 친구는 화면 밖으로.','<b>① 다리 벌리고 팔은 어깨 높이로 옆으로 쭉</b> → <b>② 차렷</b> → <b>③ 다리 벌리고 만세(팔 머리 위로 쭉)</b> → <b>④ 차렷</b>','박자마다 <b>두 발로 콩 뛰면서</b> 네 박자를 순서대로 다 하면 1회. 걸어서 발을 옮기면 <em>"콩콩 뛰면서 해요"</em>, 팔만 하면 <em>"다리도 벌려요"</em>, 순서가 바뀌면 다음 할 동작을 알려 줘요.']}
 };
 const Q=new URLSearchParams(location.search);
@@ -381,11 +437,11 @@ function applyEx(){
   const e=EX[ex];
   $('tabSquat').classList.toggle('on',ex==='squat'); $('tabJack').classList.toggle('on',ex==='jack');
   $('pickSquat').classList.toggle('on',ex==='squat'); $('pickJack').classList.toggle('on',ex==='jack');
-  $('lab').textContent=e.lab; $('meterL').textContent=e.meterL; $('meterR').textContent=e.meterR; $('partK').textContent=e.partK; $('sub').textContent=e.sub;
+  $('meterL').textContent=e.meterL; $('meterR').textContent=e.meterR; $('partK').textContent=e.partK; $('sub').textContent=e.sub;
   $('steps').innerHTML=e.steps.map((s,i)=>'<li><span>'+(i+1)+'</span><div>'+s+'</div></li>').join('');
-  makeJudge(); resetView();
+  makeJudge(); loadPlan(); resetView();
 }
-function setEx(x){ if(x===ex) return; ex=x; if(running) toggleRun(); applyEx(); }
+function setEx(x){ if(x===ex||active()) return; ex=x; applyEx(); }
 $('tabSquat').onclick=$('pickSquat').onclick=()=>setEx('squat');
 $('tabJack').onclick=$('pickJack').onclick=()=>setEx('jack');
 $('level').onchange=()=>{ level=$('level').value; judge.setLevel(level); };
@@ -458,18 +514,109 @@ function loop(){
   if(running) paint(st,t);
 }
 
+/* ---------- 운동 계획(횟수·세트·쉬는 시간)과 진행 ---------- */
+const S={mode:'idle', set:0, sets:3, reps:10, rest:10, done:[], offset:0, until:0, shown:-1, early:false};
+function loadPlan(){ let p=null; try{ p=JSON.parse(localStorage.getItem('wedown.plan.'+ex)||'null'); }catch(e){}
+  p=p||{reps:10,sets:3,rest:10}; $('pReps').value=p.reps; $('pSets').value=p.sets; $('pRest').value=p.rest; readPlan(); }
+function readPlan(){ S.reps=+$('pReps').value; S.sets=+$('pSets').value; S.rest=+$('pRest').value;
+  try{ localStorage.setItem('wedown.plan.'+ex,JSON.stringify({reps:S.reps,sets:S.sets,rest:S.rest})); }catch(e){} if(S.mode==='idle') showSet(); }
+['pReps','pSets','pRest'].forEach(id=>$(id).onchange=readPlan);
+const active=()=>S.mode==='count'||S.mode==='set'||S.mode==='rest';
+function setCount(){ return S.mode==='set'?Math.min(S.reps,judge.count-S.offset):0; }
+function sessionTotal(){ return S.done.reduce((a,b)=>a+b,0)+setCount(); }
+
+/* 기록장 — 지금은 이 기기에 저장 (학교 기록 페이지가 생기면 그쪽으로도 보냄) */
+const today=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+function readLog(){ try{ return JSON.parse(localStorage.getItem('wedown.log')||'[]'); }catch(e){ return []; } }
+const DAY_LIMIT=100;   // 하루에 같은 종목을 이만큼 넘게 하면 '무리하지 마세요' 안내
+function todayTotal(x){ return readLog().filter(r=>r.d===today()&&r.ex===x).reduce((a,r)=>a+(r.total||0),0); }
+function saveLog(rec){ const l=readLog(); l.push(rec); try{ localStorage.setItem('wedown.log',JSON.stringify(l.slice(-300))); }catch(e){}
+  if(Q.get('mode')==='post'&&window.opener){ try{ window.opener.postMessage({type:'wedown-result',...rec,ver:VER},'*'); }catch(e){} } }
+
+function say(txt){ if(!$('snd').checked||!window.speechSynthesis) return; try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(txt); u.lang='ko-KR'; u.rate=1.05; speechSynthesis.speak(u); }catch(e){} }
+function overlay(lab,num,sub,skip){ $('cd').hidden=false; $('cdLab').textContent=lab; $('cdNum').textContent=num; $('cdSub').textContent=sub||''; $('cdSkip').hidden=!skip; }
+function hideOverlay(){ $('cd').hidden=true; }
+
+function startSession(){
+  readPlan();
+  const done=todayTotal(ex), plan=S.reps*S.sets;
+  if(done+plan>DAY_LIMIT){ $('warnText').textContent='오늘 '+EX[ex].obj+' 벌써 '+done+'개 했어요. 이번까지 하면 '+(done+plan)+'개로 '+DAY_LIMIT+'개를 넘어요. 몸 상태에 맞춰 무리하지 마세요.'; $('warnModal').classList.add('on'); return; }
+  begin();
+}
+function begin(){
+  $('warnModal').classList.remove('on'); $('endModal').classList.remove('on');
+  S.set=1; S.done=[]; S.early=false; judge.reset(); t0=performance.now(); resetView(); running=true;
+  countdown(); setButtons();
+}
+function countdown(){
+  S.mode='count'; S.until=performance.now()+5000; S.shown=-1;
+  overlay(S.set+'세트 준비',5,S.reps+'회 · 똑바로 서서 기다려요'); say(S.set+'세트 준비');
+}
+function startSet(){
+  S.mode='set'; S.offset=judge.count; hideOverlay();
+  if(ex==='jack'){ judge.step=0; judge.air=false; } else if(judge.phase==='down') judge.phase='up';
+  beep(988,0.25,0.25); say('시작'); lastCount=-1; showSet();
+}
+function endSet(){
+  S.done.push(S.reps); beep(523,0.12,0.2); setTimeout(()=>beep(784,0.2,0.2),130); bubbleBurst(40);
+  const b=$('burst'); b.textContent=S.set+'세트 끝!'; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
+  if(S.set>=S.sets){ finish(); return; }
+  S.mode='rest'; S.until=performance.now()+S.rest*1000; S.shown=-1;
+  overlay('쉬는 시간',S.rest,'다음은 '+(S.set+1)+'세트 · 숨을 고르고 물도 마셔요',true); say(S.set+'세트 끝. 쉬어요');
+}
+function finish(early){
+  if(early&&S.mode==='set'){ const c=setCount(); if(c>0) S.done.push(c); }
+  S.early=!!early||S.done.length<S.sets; S.mode='done'; running=false; hideOverlay(); setButtons();
+  const total=S.done.reduce((a,b)=>a+b,0);
+  if(total>0) saveLog({d:today(), t:new Date().toTimeString().slice(0,5), ex, target:S.reps, sets:S.sets, reps:S.done.slice(), total, m:+(total*REP_M).toFixed(1)});
+  const n=todayTotal(ex);
+  $('endTitle').textContent=S.early?'여기까지 했어요':'끝까지 해냈어요!';
+  $('endBig').innerHTML=total+'<small> 회</small>';
+  $('endSets').innerHTML=S.done.map((c,i)=>'<span>'+(i+1)+'세트 '+c+'회</span>').join('')||'<span>기록이 없어요</span>';
+  $('endDepth').textContent='바다로 '+(total*REP_M).toFixed(1)+'m 내려왔어요';
+  $('endSaved').textContent=total>0?'기록장에 담았어요':'한 번도 세지 않아서 기록하지 않았어요';
+  $('endWarn').hidden=!(total>0&&n>DAY_LIMIT);
+  $('endWarn').textContent='오늘 '+EX[ex].obj+' 모두 '+n+'개 했어요. '+DAY_LIMIT+'개가 넘었으니 몸 상태에 맞춰 무리하지 마세요.';
+  $('endModal').classList.add('on'); say(S.early?'수고했어요':'끝! 수고했어요');
+  $('status').textContent='끝 — 시작을 누르면 다시 해요'; $('status').className='status idle';
+}
+function abort(){ S.mode='idle'; running=false; hideOverlay(); setButtons(); resetView(); }
+function setButtons(){
+  const on=active();
+  $('btnStart').textContent=on?'그만하기':'시작'; $('btnStart').classList.toggle('warn',on); $('btnStart').classList.toggle('primary',!on);
+  ['pReps','pSets','pRest','level'].forEach(id=>$(id).disabled=on);
+  $('tabSquat').disabled=$('tabJack').disabled=on;
+}
+setInterval(()=>{
+  const now=performance.now();
+  if(S.mode==='count'){ const r=Math.ceil((S.until-now)/1000);
+    if(r!==S.shown&&r>0){ S.shown=r; $('cdNum').textContent=r; beep(660,0.1,0.2); }
+    if(now>=S.until) startSet(); }
+  else if(S.mode==='rest'){ const r=Math.max(0,Math.ceil((S.until-now)/1000));
+    if(r!==S.shown){ S.shown=r; $('cdNum').textContent=r; if(r<=3&&r>0) beep(520,0.08,0.15); }
+    if(now>=S.until){ S.set++; countdown(); } }
+},100);
+$('cdSkip').onclick=()=>{ if(S.mode==='rest'){ S.set++; countdown(); } };
+
 /* ---------- 화면 그리기 ---------- */
 let lastCount=0;
-function showCount(n){
-  $('count').innerHTML=n+'<small>회</small>';
-  $('depth').textContent='바다로 '+(n*REP_M).toFixed(1)+'m 내려왔어요';
-  $('mainCard').style.setProperty('--sea-h',Math.min(70,(n%25)/25*70).toFixed(1)+'%');
+function showSet(){
+  const c=setCount(), cur=S.mode==='idle'?1:Math.min(S.set,S.sets);
+  $('count').innerHTML=c+'<small>/'+S.reps+'</small>';
+  $('lab').textContent=EX[ex].name+' · '+cur+' / '+S.sets+'세트';
+  $('depth').textContent='바다로 '+(sessionTotal()*REP_M).toFixed(1)+'m 내려왔어요';
+  $('mainCard').style.setProperty('--sea-h',(c/S.reps*70).toFixed(1)+'%');
 }
 function paint(st,t){
-  if(st.count!==lastCount){ lastCount=st.count; showCount(st.count); $('count').classList.remove('flash'); void $('count').offsetWidth; $('count').classList.add('flash'); beep(660,0.08,0.15);
-    if(st.count>0&&st.count%10===0) celebrate(st.count); }
+  if(S.mode==='set'){
+    const c=setCount();
+    if(c!==lastCount){ if(lastCount>=0&&c>lastCount){ $('count').classList.remove('flash'); void $('count').offsetWidth; $('count').classList.add('flash'); beep(660,0.08,0.15); } lastCount=c; showSet(); }
+    if(c>=S.reps){ endSet(); return; }
+  }
   const s=$('status'), recent=t-st.whyT<1.6, set=(txt,c)=>{ s.textContent=txt; s.className='status '+c; };
-  if(!st.visible) set('카메라 앞에 서 주세요','wait');
+  if(S.mode==='count') set('곧 시작해요 — 자리를 잡아요','wait');
+  else if(S.mode==='rest') set('쉬는 시간','idle');
+  else if(!st.visible) set('카메라 앞에 서 주세요','wait');
   else if(!st.full) set(ex==='squat'?'발까지 다 보이게 조금 뒤로 물러서요':'머리부터 발까지 다 보이게 서요','wait');
   else if(!st.ready) set(st.moved?'자리가 바뀌었어요 — 똑바로 서서 잠깐만':'똑바로 서서 잠깐 기다려요','wait');
   else if(recent&&st.why==='shallow') set('조금 더 깊이 앉아요!','hint');
@@ -482,9 +629,9 @@ function paint(st,t){
   else if(ex==='squat'&&st.phase==='down') set('좋아요, 이제 일어나요!','good');
   else if(ex==='jack'&&(st.step===1||st.step===3)) set('좋아요, 차렷!','good');
   else if(ex==='jack'&&st.step===2) set('이번엔 만세! 팔을 머리 위로 쭉','good');
-  else if(st.count===0) set(ex==='squat'?'준비됐어요 — 앉았다 일어나 봐요!':'준비됐어요 — 다리 벌리고 팔은 어깨 높이로!','idle');
+  else if(setCount()===0) set(ex==='squat'?'앉았다 일어나요!':'다리 벌리고 팔은 어깨 높이로!','idle');
   else if(t-st.lastRep<2.5) set('잘하고 있어요!','good');
-  else set('멈췄어요','idle');
+  else set('조금만 더 힘내요!','idle');
   const m=Math.max(0,Math.min(1,st.meter/1.2));
   $('meter').style.width=(m*100).toFixed(1)+'%';
   $('meterLine').style.left=(Math.min(1,judge.line()/1.2)*100).toFixed(1)+'%';
@@ -495,21 +642,22 @@ function paint(st,t){
 function diff(){
   const d=$('manual').value===''?null:+$('manual').value, el=$('diff');
   if(d===null){ el.textContent='—'; el.className='diff'; return; }
-  const gap=d-judge.count;
+  const gap=d-sessionTotal();
   el.textContent=gap===0?'딱 맞아요!':gap>0?'직접 센 게 '+gap+'회 더 많아요':'판정기가 '+(-gap)+'회 더 셌어요';
   el.className='diff '+(Math.abs(gap)<=Math.max(1,d*0.1)?'ok':'bad');
 }
 function resetView(){
-  lastCount=0; showCount(0); $('meter').style.width='0%';
+  lastCount=0; showSet(); $('meter').style.width='0%';
   ['rate','best','part','fast'].forEach(k=>$(k).textContent='0'); $('time').textContent='0:00';
-  $('status').textContent=running?'준비됐어요':'시작을 누르고 카메라 앞에 서요'; $('status').className='status idle';
+  $('status').textContent='횟수·세트를 정하고 시작을 눌러요'; $('status').className='status idle';
   diff();
 }
-function toggleRun(){
-  running=!running;
-  if(running){ t0=performance.now(); judge.reset(); resetView(); beep(660,0.1,0.2); }
-  else { beep(440,0.15,0.2); $('status').textContent='멈춤 — 시작을 누르면 처음부터 다시 세요'; $('status').className='status idle'; }
-  $('btnStart').textContent=running?'멈춤':'시작'; $('btnStart').classList.toggle('warn',running); $('btnStart').classList.toggle('primary',!running);
+
+/* 기록장 보기 */
+function showLog(){
+  const l=readLog().slice(-30).reverse();
+  $('logList').innerHTML=l.length?l.map(r=>'<li><b>'+r.d.slice(5).replace('-','/')+' '+(r.t||'')+'</b> '+(EX[r.ex]?EX[r.ex].name:r.ex)+' <span>'+r.reps.join(' · ')+'</span> <em>'+r.total+'회</em></li>').join(''):'<li>아직 기록이 없어요</li>';
+  $('logModal').classList.add('on');
 }
 
 /* ---------- 버튼 ---------- */
@@ -517,14 +665,20 @@ $('btnCam').onclick=async()=>{
   try{ await loadModel(); $('btnCam').textContent='카메라 켜는 중…'; await openCam(); $('cover').classList.add('hide'); t0=performance.now(); loop(); }
   catch(e){ console.error(e); $('coverErr').textContent='시작하지 못했어요: '+(e.message||e)+(location.protocol==='file:'?' — 파일로 열면 카메라가 막힐 수 있어요. 인터넷에 올린 주소로 열어 보세요.':''); $('btnCam').disabled=false; $('btnCam').textContent='다시 시도'; }
 };
-$('btnStart').onclick=toggleRun;
-$('btnReset').onclick=()=>{ judge.reset(); t0=performance.now(); $('manual').value=''; resetView(); };
+$('btnStart').onclick=()=>{ if(active()) finish(true); else startSession(); };
+$('btnReset').onclick=()=>{ abort(); $('manual').value=''; };
+$('warnGo').onclick=begin;
+$('warnStop').onclick=()=>$('warnModal').classList.remove('on');
+$('endAgain').onclick=()=>{ $('endModal').classList.remove('on'); startSession(); };
+$('endClose').onclick=()=>{ $('endModal').classList.remove('on'); abort(); };
+$('btnLog').onclick=showLog;
+$('logClose').onclick=()=>$('logModal').classList.remove('on');
 $('btnFlip').onclick=async()=>{ facing=facing==='user'?'environment':'user'; try{ await openCam(); }catch(e){} };
 $('pip').onclick=()=>$('pip').classList.toggle('big');
 $('btnFull').onclick=()=>{ try{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); }catch(e){} };
 document.addEventListener('fullscreenchange',()=>{ $('btnFull').textContent=document.fullscreenElement?'전체 화면 끄기':'전체 화면'; });
 $('manual').oninput=diff;
-document.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT') return; if(e.code==='Space'){ e.preventDefault(); $('btnStart').click(); } if(e.key==='r'||e.key==='R') $('btnReset').click(); if(e.key==='f'||e.key==='F') $('btnFull').click(); });
+document.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if(e.code==='Space'){ e.preventDefault(); $('btnStart').click(); } if(e.key==='f'||e.key==='F') $('btnFull').click(); });
 applyEx();
 </script>
 </body>

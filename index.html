@@ -235,7 +235,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.8.1', NEED_SHELL = 3, REP_M = 0.4;
+const VER = '0.8.2', NEED_SHELL = 4, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
@@ -374,7 +374,7 @@ function checkerUrl(student, task, room, back){
 }
 function loadMain(){
   rpc('getDashboard').then(function(d){
-    if ((d.settings.shell || 0) < NEED_SHELL) return showSetup('학교 시트의 껍데기(Shell.gs)를 <b>3판</b>으로 바꿔 주세요. 학년·반·학생 비밀번호(처음 1234)가 새로 생겼어요.<br>학교 시트 → 확장 프로그램 → Apps Script 에 새 Shell.gs 를 통째로 붙여넣고 저장 → <b>배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포</b>. 주소·학생·기록은 그대로예요.');
+    if ((d.settings.shell || 0) < NEED_SHELL) return showSetup('학교 시트의 껍데기(Shell.gs)를 <b>4판</b>으로 바꿔 주세요. 학년·반·학생 비밀번호(처음 1234)가 새로 생겼어요.<br>학교 시트 → 확장 프로그램 → Apps Script 에 새 Shell.gs 를 통째로 붙여넣고 저장 → <b>배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포</b>. 주소·학생·기록은 그대로예요.');
     document.title = (d.settings.className ? d.settings.className + ' · ' : '') + '우리 Down';
     renderMain(d);
     clearTimeout(MAIN.timer); MAIN.timer = setTimeout(loadMain, 60000);
@@ -429,11 +429,11 @@ function renderAdmin(s, students, records){
     card('하루 안내 기준', '한 학생이 같은 종목을 하루에 이만큼 넘게 하려 하면 <b><u>몸 상태에 맞춰 무리하지 마세요</u></b> 안내가 떠요. 시간 운동은 2초를 1개로 셈해요.',
       '<label class="f">같은 종목 하루<select id="sLimit">' + opt([50, 80, 100, 150, 200], s.dayLimit, n('개')) + '</select></label>' + save('saveLimit'))) +
   pane('students',
-    card('학생 관리', '칸을 고치면 그 줄에 <b>저장</b> 버튼이 나와요(엔터로도 저장). 학생 비밀번호는 처음에 <b>1234</b>이고, 바꿀 때만 넣어요. 지워도 그 학생의 기록은 학교 시트에 남아요.',
-      (students.length ? '<div class="stbl"><table><thead><tr><th>학년</th><th>반</th><th>번호</th><th>이름</th><th>비밀번호</th><th></th></tr></thead><tbody>' + students.map(function(x){
+    card('학생 관리', '칸을 고치면 그 줄에 <b>저장</b> 버튼이 나와요(엔터로도 저장). 학생 비밀번호는 처음에 <b>1234</b>이고, 바꿀 때만 넣어요. 잊었으면 <b>비번 초기화</b>로 1234로 되돌려요. 지워도 그 학생의 기록은 학교 시트에 남아요.',
+      (students.length ? '<div class="arow"><button class="btn" id="pwAll">비밀번호 일괄 초기화 (모두 1234)</button><span class="ok" id="pwAllOk"></span></div><div class="stbl"><table><thead><tr><th>학년</th><th>반</th><th>번호</th><th>이름</th><th>비밀번호</th><th></th></tr></thead><tbody>' + students.map(function(x){
         return '<tr data-id="' + esc(x.id) + '"><td><input data-k="grade" inputmode="numeric" value="' + esc(x.grade) + '"></td><td><input data-k="cls" inputmode="numeric" value="' + esc(x.cls) + '"></td><td><input data-k="number" inputmode="numeric" value="' + esc(x.number) + '"></td><td><input data-k="name" class="nm" value="' + esc(x.name) + '"></td>' +
-          '<td><input data-k="pw" type="password" autocomplete="new-password" placeholder="' + (x.pwDefault ? '1234 (처음 그대로)' : '바꿈 · 바꿀 때만') + '">' + (x.pwDefault ? '' : '<label class="nopw"><input type="checkbox" data-k="clearPw">1234로 되돌리기</label>') + '</td>' +
-          '<td class="acts"><button class="sv" data-save>저장</button><button data-del="' + esc(x.id) + '" data-name="' + esc(x.name) + '">지우기</button></td></tr>'; }).join('') + '</tbody></table></div>'
+          '<td><input data-k="pw" type="password" autocomplete="new-password" placeholder="' + (x.pwDefault ? '1234 (처음 그대로)' : '바꿈 · 바꿀 때만') + '">' + '</td>' +
+          '<td class="acts"><button class="sv" data-save>저장</button><button data-pwr="' + esc(x.id) + '" data-name="' + esc(x.name) + '">비번 초기화</button><button data-del="' + esc(x.id) + '" data-name="' + esc(x.name) + '">지우기</button></td></tr>'; }).join('') + '</tbody></table></div>'
         : '<p class="hint">아직 등록된 학생이 없어요. <b>학생 등록</b>에서 붙여 넣어 주세요.</p>'))) +
   pane('register',
     card('엑셀에서 붙여넣어 등록', '엑셀·구글시트에서 <b>학년 · 반 · 번호 · 이름</b> 네 칸(원하면 다섯째 칸에 <b>비밀번호</b>)을 복사해서 아래에 붙여 넣으세요. 직접 칠 때는 띄어쓰기로 구분해도 돼요 (예: <b><u>6 1 3 김하늘</u></b>). 한 반만 쓰면 학년·반은 빼고 <b><u>3 김하늘</u></b>처럼 써도 돼요. 제목 줄은 저절로 건너뛰어요. 붙여 넣으면 아래 표에서 확인한 뒤 등록해요.',
@@ -508,6 +508,10 @@ function renderAdmin(s, students, records){
     rpc('addStudentsBulk', [token(), rows]).then(function(r){ $('bulkOk').textContent = r.added + '명 등록했어요' + (r.skipped ? ' (이미 있던 ' + r.skipped + '명은 뺐어요)' : ''); setTimeout(loadAdmin, 900); }).catch(function(e){ if (!authFail(e, 'admin')) { $('bulkOk').textContent = e.message; $('bulkAdd').disabled = false; } }); };
   $('oneAdd').onclick = function(){ const r = { grade: $('oGrade').value.trim(), cls: $('oCls').value.trim(), number: $('oNum').value.trim(), name: $('oName').value.trim(), pw: $('oPw').value.trim() }; if (!r.name) { $('oneOk').textContent = '이름을 넣어 주세요'; return; } $('oneAdd').disabled = true;
     rpc('addStudentsBulk', [token(), [r]]).then(function(x){ $('oneOk').textContent = x.added ? r.name + ' 학생을 추가했어요' : '이미 있는 학생이에요'; setTimeout(loadAdmin, 900); }).catch(function(e){ if (!authFail(e, 'admin')) { $('oneOk').textContent = e.message; $('oneAdd').disabled = false; } }); };
+  document.querySelectorAll('[data-pwr]').forEach(function(b){ b.onclick = function(){ if (!confirm(b.getAttribute('data-name') + ' 학생의 비밀번호를 1234로 초기화할까요?')) return; b.disabled = true;
+    rpc('resetStudentPw', [token(), b.getAttribute('data-pwr')]).then(function(){ b.textContent = '1234로 됐어요'; const i = b.closest('tr').querySelector('input[data-k="pw"]'); if (i) i.placeholder = '1234 (처음 그대로)'; }).catch(function(e){ b.disabled = false; if (!authFail(e, 'admin')) alert(e.message); }); }; });
+  if ($('pwAll')) $('pwAll').onclick = function(){ if (!confirm('등록된 학생 ' + students.length + '명의 비밀번호를 모두 1234로 초기화할까요?')) return; $('pwAll').disabled = true;
+    rpc('resetAllStudentPw', [token()]).then(function(r){ $('pwAllOk').textContent = r.count + '명 모두 1234로 초기화했어요'; setTimeout(loadAdmin, 1200); }).catch(function(e){ $('pwAll').disabled = false; if (!authFail(e, 'admin')) $('pwAllOk').textContent = e.message; }); };
   document.querySelectorAll('.stbl tr[data-id]').forEach(function(tr){
     const sv = tr.querySelector('[data-save]');
     tr.querySelectorAll('input').forEach(function(inp){ inp.addEventListener('input', function(){ tr.classList.add('dirty'); }); inp.addEventListener('change', function(){ tr.classList.add('dirty'); }); inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') sv.click(); }); });

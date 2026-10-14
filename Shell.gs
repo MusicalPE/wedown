@@ -15,7 +15,7 @@
  * Copyright (c) 2026 음악적체육인. 사용 조건은 https://github.com/MusicalPE/wedown 의 LICENSE 를 봐 주세요.
  *************************************************************/
 
-const SHELL_VERSION = 3;
+const SHELL_VERSION = 4;
 const APP_URL = 'https://musicalpe.github.io/wedown/';
 
 const SHEET_STUDENTS = 'Students';
@@ -61,7 +61,7 @@ function doGet(e) {
 const RPC_ALLOW_ = [
   'ping', 'getPublic', 'getDashboard', 'getStudentsPublic', 'getStudentToday', 'saveRecord',
   'verifyAdminPassword', 'changeAdminPassword', 'getSettingsAdmin', 'setSettings',
-  'addStudentsBulk', 'renameStudent', 'updateStudent', 'deleteStudent', 'checkStudentPw', 'getRecordsAdmin', 'deleteRecord',
+  'addStudentsBulk', 'renameStudent', 'updateStudent', 'deleteStudent', 'checkStudentPw', 'resetStudentPw', 'resetAllStudentPw', 'getRecordsAdmin', 'deleteRecord',
   'roomOpen', 'roomClose', 'roomSendTask', 'roomStatus', 'roomInfo', 'roomJoin', 'roomPoll', 'roomProgress'
 ];
 function doPost(e) {
@@ -215,6 +215,16 @@ function updateStudent(token, id, o) {
     return { ok: true };
   }
   throw new Error('학생을 찾지 못했어요.');
+}
+// 비밀번호 초기화(1234) — 한 명 / 모두
+function resetStudentPw(token, id) { return updateStudent(token, id, { clearPw: true }); }
+function resetAllStudentPw(token) {
+  admin_(token);
+  const sh = studentsSheet_(), n = sh.getLastRow() - 1;
+  if (n < 1) return { count: 0 };
+  const ids = sh.getRange(2, 1, n, 1).getValues(), h = hash_(DEFAULT_STUDENT_PASSWORD);
+  sh.getRange(2, 7, n, 1).setValues(ids.map(function (r) { return [r[0] ? h : '']; }));
+  return { count: ids.filter(function (r) { return r[0]; }).length };
 }
 function renameStudent(token, id, name, number) { return updateStudent(token, id, { name: name, number: number === '' ? null : number }); }
 // 학생 비밀번호 확인 (예전에 비밀번호 없이 등록된 학생은 1234)

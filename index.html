@@ -97,7 +97,7 @@
   .ruler .mark{position:absolute;left:-4px;right:-4px;height:8px;border-radius:99px;background:var(--amber);box-shadow:0 0 0 3px rgba(242,179,61,.3)}
   .rlabels{position:relative;width:190px;flex:none;font-size:13px;color:var(--ink2);font-weight:700}
   .rlabels span{position:absolute;left:0;transform:translateY(-50%);white-space:nowrap}
-  .depthbig{display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0}
+  .depthbig{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;flex:1;gap:8px;min-width:0}
   .depthbig .k{font-size:16px;font-weight:700;color:var(--sea-ink)}
   .depthbig .v{font-size:clamp(64px,10vw,108px);font-weight:900;line-height:.9;letter-spacing:-.05em;color:var(--navy)}
   .depthbig .v small{font-size:.34em}
@@ -257,7 +257,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.8.7', NEED_SHELL = 4, REP_M = 0.4;
+const VER = '0.8.8', NEED_SHELL = 4, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];

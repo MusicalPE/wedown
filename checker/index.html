@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.1.3</title>
+<title>위 Down 맨몸 판정기 v0.1.4</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -256,7 +256,8 @@
 /*JUDGE-START*/
 const LEVELS={
   squat:{easy:0.28, normal:0.4, hard:0.6},      // 앉은 깊이(0 선 자세 ~ 1 허벅지 수평) 이만큼 넘어야 1회
-  jack:{easy:0.95, normal:1.15, hard:1.35}      // 발목 사이 거리 ÷ 어깨너비 가 이만큼 넘어야 '다리 벌림'
+  jack:{easy:0.95, normal:1.15, hard:1.35},     // 발목 사이 거리 ÷ 어깨너비 가 이만큼 넘어야 '다리 벌림'
+  jackJump:{easy:0, normal:0.07, hard:0.12}      // 박자마다 두 발이 함께 떠야 하는 높이(몸통 길이 비율) — 쉽게는 점프 안 봄
 };
 function Counter(){ this.resetBase(); }
 Counter.prototype.resetBase=function(){ this.count=0; this.best=0; this.streak=0; this.lastRep=-99; this.times=[]; this.partial=0; this.fast=0; this.why=''; this.whyT=-99; this.visible=false; this.full=false; this.meter=0; this.phase=''; this.lastT=0; };
@@ -314,11 +315,11 @@ SquatJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this
 
 function JackJudge(level){ Counter.call(this); this.setLevel(level||'normal'); this.reset(); }
 JackJudge.prototype=Object.create(Counter.prototype);
-JackJudge.prototype.setLevel=function(l){ this.th=LEVELS.jack[l]||1.15; };
+JackJudge.prototype.setLevel=function(l){ this.th=LEVELS.jack[l]||1.15; this.jumpTh=LEVELS.jackJump[l]??0.07; };
 /* 4박자가 1회: ① 다리 벌리고 팔 어깨 높이(옆으로) → ② 차렷 → ③ 다리 벌리고 만세(머리 위로 쭉) → ④ 차렷
    step 0~3 = 다음에 해야 할 박자. 순서를 건너뛰면 세지 않고 알려 줌 */
 JackJudge.prototype.line=function(){ return 1.2; };
-JackJudge.prototype.reset=function(){ this.resetBase(); this.step=0; this.stepT=0; this.seenArms=false; this.seenLegs=false; this.ready=true; this.phase='s0'; };
+JackJudge.prototype.reset=function(){ this.resetBase(); this.step=0; this.stepT=0; this.seenArms=false; this.seenLegs=false; this.ready=true; this.phase='s0'; this.floor=null; this.air=false; this.jumpWarned=false; };
 JackJudge.prototype.push=function(t,lm){
   this.lastT=t; const v=i=>vis(lm,i);
   this.visible=v(11)&&v(12);
@@ -335,11 +336,17 @@ JackJudge.prototype.push=function(t,lm){
   const armsT=Math.abs(wHi-shY)<0.3*torso&&Math.abs(wLo-shY)<0.3*torso&&wSpan>2.2;  // 두 손 어깨 높이로 옆으로 쭉
   const legsOpen=sp>this.th, legsClosed=sp<this.th*0.72;
   const closed=armsDown&&legsClosed;
+  // 점프: 바닥(발목이 가장 낮게 있던 높이)에서 두 발이 '함께' 떴는지 — 한 발씩 옮기면 안 됨
+  const ayL=lm[27].y, ayR=lm[28].y, ay=Math.max(ayL,ayR);
+  if(this.floor===null||ay>this.floor) this.floor=ay; else this.floor+=(ay-this.floor)*0.02;
+  if(Math.min(this.floor-ayL,this.floor-ayR)>this.jumpTh*torso) this.air=true;
+  const jumped=this.jumpTh<=0||this.air;
   const want=this.step;                         // 0: 어깨  1: 차렷  2: 만세  3: 차렷
   const ok=(want===0&&legsOpen&&armsT)||(want===2&&legsOpen&&armsUp)||((want===1||want===3)&&closed);
   if(this.step>0&&t-this.stepT>5) this.step=0;  // 5초 넘게 다음 박자가 없으면 처음부터
-  if(ok&&t-this.stepT>=0.12){
-    this.step=(this.step+1)%4; this.stepT=t; this.seenArms=this.seenLegs=false;
+  if(ok&&t-this.stepT>=0.12&&!jumped&&!this.jumpWarned){ this.hint(t,'jump'); this.jumpWarned=true; }
+  if(ok&&t-this.stepT>=0.12&&jumped){
+    this.step=(this.step+1)%4; this.stepT=t; this.seenArms=this.seenLegs=false; this.air=false; this.jumpWarned=false;
     if(this.step===0) this.rep(t);
   } else if(want===0||want===2){
     // 벌려야 할 차례: 반만 하거나 순서가 바뀐 것 알려 주기
@@ -357,14 +364,14 @@ JackJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this)
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.1.3', REP_M=0.4;
+const VER='0.1.4', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
   squat:{name:'스쿼트', lab:'지금까지 한 스쿼트', meterL:'앉은 깊이', meterR:'선을 넘고 일어나면 1회', partK:'덜 앉은', sub:'엉덩이가 무릎 높이 쪽으로 내려갔다 일어나야 1회',
     steps:['기기에서 <b>2~3m</b> 떨어져 <b>엉덩이·무릎·발목</b>이 다 보이게 서요. <b>옆으로 서면</b> 더 정확해요.','처음 <b>1초</b>는 똑바로 서 있어요. 서 있는 높이를 기준으로 잡아요.','엉덩이를 뒤로 빼며 앉았다가 <b>다 일어나면</b> 1회. 덜 앉으면 <em>"조금 더 깊이"</em>가 떠요.']},
   jack:{name:'점핑잭', lab:'지금까지 한 점핑잭', meterL:'어깨 → 차렷 → 만세 → 차렷', meterR:'네 박자를 다 하면 1회', partK:'덜 한', sub:'어깨 높이 → 차렷 → 만세 → 차렷, 네 박자가 1회',
-    steps:['<b>정면</b>을 보고 <b>머리부터 발까지</b> 다 보이게 서요. 옆 친구는 화면 밖으로.','<b>① 다리 벌리고 팔은 어깨 높이로 옆으로 쭉</b> → <b>② 차렷</b> → <b>③ 다리 벌리고 만세(팔 머리 위로 쭉)</b> → <b>④ 차렷</b>','네 박자를 순서대로 다 하면 1회. 팔만 하면 <em>"다리도 벌려요"</em>, 순서가 바뀌면 다음 할 동작을 알려 줘요.']}
+    steps:['<b>정면</b>을 보고 <b>머리부터 발까지</b> 다 보이게 서요. 옆 친구는 화면 밖으로.','<b>① 다리 벌리고 팔은 어깨 높이로 옆으로 쭉</b> → <b>② 차렷</b> → <b>③ 다리 벌리고 만세(팔 머리 위로 쭉)</b> → <b>④ 차렷</b>','박자마다 <b>두 발로 콩 뛰면서</b> 네 박자를 순서대로 다 하면 1회. 걸어서 발을 옮기면 <em>"콩콩 뛰면서 해요"</em>, 팔만 하면 <em>"다리도 벌려요"</em>, 순서가 바뀌면 다음 할 동작을 알려 줘요.']}
 };
 const Q=new URLSearchParams(location.search);
 let ex=Q.get('ex')==='jack'?'jack':'squat', level='normal';
@@ -468,6 +475,7 @@ function paint(st,t){
   else if(recent&&st.why==='shallow') set('조금 더 깊이 앉아요!','hint');
   else if(recent&&st.why==='legs') set('다리도 벌려요!','hint');
   else if(recent&&st.why==='arms') set(ex==='jack'&&st.step===0?'팔도 어깨 높이로 쭉!':'팔도 머리 위로 올려요!','hint');
+  else if(recent&&st.why==='jump') set('콩콩 뛰면서 해요! 두 발이 같이 떠야 해요','hint');
   else if(recent&&st.why==='orderT') set('먼저 팔은 어깨 높이로!','hint');
   else if(recent&&st.why==='orderU') set('이번엔 만세! 팔을 머리 위로 쭉','hint');
   else if(recent&&st.why==='fast') set('너무 빨라요 — 끝까지 천천히!','hint');

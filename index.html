@@ -59,6 +59,7 @@
   .names button.on{background:var(--sea);border-color:var(--sea);color:#fff}
   .picker{display:flex;flex-direction:column;gap:10px}
   .psel{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px}
+  .pname{min-height:52px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 14px;font-size:18px;font-weight:700;color:var(--ink);width:100%}
   .psel select{min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--soft);padding:0 12px;font-size:16px;font-weight:700;color:var(--navy)}
   .pwin::placeholder{letter-spacing:0;font-size:16px}
   .names button small{font-size:12px;color:var(--muted);margin-right:4px;font-weight:700}
@@ -246,7 +247,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.8.4', NEED_SHELL = 4, REP_M = 0.4;
+const VER = '0.8.5', NEED_SHELL = 4, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
@@ -273,7 +274,7 @@ function nameGrid(list, cur){
   if (PICK.g !== '' || grades.length === 1) {
     if (PICK.c !== '' || classes.length === 1) {
       const ss = inG.filter(function(s){ return gv(s.cls) === PICK.c; });
-      h += '<div class="names">' + ss.map(function(s){ return '<button data-sid="' + esc(s.id) + '" data-name="' + esc(s.name) + '" class="' + (s.id === cur ? 'on' : '') + '">' + (gv(s.number) ? '<small>' + esc(s.number) + '</small>' : '') + esc(s.name) + '</button>'; }).join('') + '</div>';
+      h += '<select id="pickS" class="pname" aria-label="내 이름"><option value="">내 이름 고르기</option>' + ss.map(function(s){ return '<option value="' + esc(s.id) + '"' + (s.id === cur ? ' selected' : '') + '>' + (gv(s.number) ? esc(s.number) + '번 ' : '') + esc(s.name) + '</option>'; }).join('') + '</select>';
     } else h += '<p class="hint">반을 골라요</p>';
   } else h += '<p class="hint">학년을 골라요</p>';
   return h + '</div>';
@@ -391,7 +392,7 @@ function renderMain(d){
         (students.length ? '<div id="ropeArea"></div>' : '<div class="empty">학생을 등록하면 여기에 한 사람씩 다이빙 줄이 생겨요</div>') + '</section>' +
       '<section class="card go"><div class="head"><h2>나 Down</h2><span class="plan">' + (isT(MAIN.ex) ? secLabel(st.plankSec || 30) : st.reps + '회') + ' × ' + st.sets + '세트 · 쉬기 ' + st.rest + '초</span></div>' +
         exSeg(MAIN.ex, 'mex') +
-        (students.length ? '<p class="hint">' + (students.some(function(s){ return gv(s.grade) || gv(s.cls); }) ? '학년·반을 고르고 ' : '') + '내 이름을 누르고 카메라로 시작해요</p>' + nameGrid(students, MAIN.sid) : '<p class="hint">아직 등록된 학생이 없어요. 관리자 메뉴에서 학생을 등록해 주세요.</p>') +
+        (students.length ? '<p class="hint">' + (students.some(function(s){ return gv(s.grade) || gv(s.cls); }) ? '학년·반을 고르고 ' : '') + '내 이름을 골라 카메라로 시작해요</p>' + nameGrid(students, MAIN.sid) : '<p class="hint">아직 등록된 학생이 없어요. 관리자 메뉴에서 학생을 등록해 주세요.</p>') +
         (sel && sel.hasPw ? '<input class="pwin" id="stuPw" type="password" inputmode="numeric" autocomplete="off" placeholder="내 비밀번호"><span class="err" id="pwErr"></span>' : '') +
         '<button class="btn primary" id="goCam" ' + (sel ? '' : 'disabled') + '>' + (sel ? esc(sel.name) + ', 카메라로 시작하기' : '이름을 먼저 골라요') + '</button></section>' +
     '</div>' +
@@ -402,7 +403,7 @@ function renderMain(d){
   if ($('ropeArea')) { $('ropeArea').innerHTML = ropeChart(students); bindRope(); }
   bindPick(function(){ MAIN.sid = ''; renderMain(MAIN.data); });
   document.querySelectorAll('[data-mex]').forEach(function(b){ b.onclick = function(){ MAIN.ex = b.getAttribute('data-mex'); renderMain(MAIN.data); }; });
-  document.querySelectorAll('#names [data-sid]').forEach(function(b){ b.onclick = function(){ MAIN.sid = b.getAttribute('data-sid'); renderMain(MAIN.data); if ($('stuPw')) $('stuPw').focus(); }; });
+  if ($('pickS')) $('pickS').onchange = function(){ MAIN.sid = this.value; renderMain(MAIN.data); if ($('stuPw')) $('stuPw').focus(); };
   const goNow = function(){ location.href = checkerUrl(sel, { ex: MAIN.ex, reps: isT(MAIN.ex) ? (st.plankSec || 30) : st.reps, sets: st.sets, rest: st.rest }, '', link('main')); };
   if ($('stuPw')) $('stuPw').onkeydown = function(e){ if (e.key === 'Enter') $('goCam').click(); };
   if ($('goCam')) $('goCam').onclick = function(){ if (!sel) return; if (!sel.hasPw) return goNow();
@@ -649,16 +650,16 @@ function askCode(msg){
   $('enter').onclick = function(){ const c = $('code').value.trim(); if (!/^\d{4}$/.test(c)) return; Q.code = c; loadJoin(); };
 }
 function pickName(info){
-  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:12px">' + brand(info.className + ' 운동방') + '<h2>내 이름을 눌러요</h2>' +
+  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:12px">' + brand(info.className + ' 운동방') + '<h2>내 이름을 골라요</h2>' +
     nameGrid(info.students, '') + '<div id="pwStep" style="display:none;flex-direction:column;gap:10px"><p class="hint" id="pwWho"></p><input class="pwin" id="joinPw" type="password" inputmode="numeric" autocomplete="off" placeholder="내 비밀번호"><button class="btn primary" id="pwGo">들어가기</button></div><span class="err" id="joinErr"></span></div></div></div>';
   bindPick(function(){ pickName(info); });
-  document.querySelectorAll('#names [data-sid]').forEach(function(b){ b.onclick = function(){
-    const s = info.students.find(function(x){ return x.id === b.getAttribute('data-sid'); });
+  if ($('pickS')) $('pickS').onchange = function(){
+    const s = info.students.find(function(x){ return x.id === $('pickS').value; });
+    if (!s) { $('pwStep').style.display = 'none'; return; }
     JOIN.sid = s.id; JOIN.name = s.name;
-    document.querySelectorAll('#names [data-sid]').forEach(function(x){ x.classList.toggle('on', x === b); });
     if (!s.hasPw) { store('wd_join_sid', JOIN.sid); store('wd_join_name', JOIN.name); store('wd_join_pw', null); return joined(); }
     $('pwStep').style.display = 'flex'; $('pwWho').innerHTML = '<b>' + esc(s.name) + '</b>, 비밀번호를 넣어요'; $('joinErr').textContent = ''; $('joinPw').value = ''; $('joinPw').focus();
-  }; });
+  };
   $('joinPw').onkeydown = function(e){ if (e.key === 'Enter') $('pwGo').click(); };
   $('pwGo').onclick = function(){ const pw = $('joinPw').value; $('pwGo').disabled = true;
     rpc('roomJoin', [JOIN.code, JOIN.sid, pw]).then(function(r){ store('wd_join_sid', JOIN.sid); store('wd_join_name', JOIN.name); store('wd_join_pw', pw); showJoin(r); })

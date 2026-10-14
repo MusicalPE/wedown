@@ -22,7 +22,10 @@ const SHEET_STUDENTS = 'Students';
 const SHEET_RECORDS = 'Records';
 const STUDENTS_HEADER_ = ['ID', 'Number', 'Name', 'SortOrder'];
 const RECORDS_HEADER_ = ['RecordID', 'Timestamp', 'StudentID', 'Date', 'Time', 'Exercise', 'Target', 'Sets', 'Reps', 'Total', 'Source'];
-const EXERCISES_ = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈' };
+const EXERCISES_ = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
+// 부위별 묶음 (메인 화면 '이번 주 부위별'에 씀)
+const GROUPS_ = [['legs', '다리·엉덩이', ['squat', 'lunge']], ['arms', '팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['core', '배(코어)', ['situp', 'legraise', 'plank']], ['bal', '균형', ['balance']], ['cardio', '유산소', ['jack', 'highknee', 'burpee', 'climber']]];
+function groupOf_(ex) { for (let i = 0; i < GROUPS_.length; i++) if (GROUPS_[i][2].indexOf(ex) >= 0) return GROUPS_[i][0]; return 'cardio'; }
 // 플랭크·외발 서기는 초로 기록하고, 바다 깊이는 2초 = 1회(40cm)로 셈
 function isTimed_(ex) { return ex === 'plank' || ex === 'balance'; }
 function units_(ex, n) { return isTimed_(ex) ? n / 2 : n; }
@@ -256,11 +259,12 @@ function getDashboard() {
   students.forEach(function (s) { by[s.id] = { id: s.id, name: s.name, number: s.number, total: 0, today: 0, week: 0, days: {} }; });
   const todayList = [];
   let todayCount = 0;
+  const wg = {}; GROUPS_.forEach(function (g) { wg[g[0]] = 0; });
   recs.forEach(function (r) {
     const s = by[r.sid]; if (!s) return;
     const u = units_(r.ex, r.total);      // 회 단위(플랭크는 2초 = 1회)로 모아 바다 깊이를 셈
     s.total += u; s.days[r.date] = true;
-    if (r.date >= monday) s.week += u;
+    if (r.date >= monday) { s.week += u; wg[groupOf_(r.ex)] += u; }
     if (r.date === t) { s.today += u; todayCount++; todayList.push({ time: r.time, name: s.name, ex: EXERCISES_[r.ex] || r.ex, reps: r.reps, total: r.total, unit: unitName_(r.ex) }); }
   });
   const list = students.map(function (s) {
@@ -275,7 +279,8 @@ function getDashboard() {
   return {
     date: t, settings: getPublic(), students: list, classTotal: classTotal, classToday: classToday, todayCount: todayCount,
     leaders: { week: top('week'), today: top('today'), streak: top('streak') },
-    todayList: todayList.reverse().slice(0, 12), repM: REP_M
+    todayList: todayList.reverse().slice(0, 12), repM: REP_M,
+    weekGroups: GROUPS_.map(function (g) { return { k: g[0], name: g[1], value: wg[g[0]] }; })
   };
 }
 

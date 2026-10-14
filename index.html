@@ -44,7 +44,15 @@
   .seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;background:var(--soft);border-radius:14px;padding:4px}
   .seg button{min-height:44px;border:0;border-radius:11px;background:transparent;color:var(--ink2);font-weight:700}
   .seg button.on{background:var(--navy);color:#fff}
-  .seg4{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+  .seg4{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+  .segg{display:flex;flex-direction:column;gap:6px}
+  .sgrp{display:flex;flex-direction:column;gap:3px}
+  .sgrp > b{font-size:12px;color:var(--sea-ink);padding-left:4px}
+  .dark .gbar{display:grid;grid-template-columns:76px minmax(0,1fr) 52px;gap:8px;align-items:center;font-size:14px}
+  .dark .gbar i{display:block;height:10px;border-radius:99px;background:var(--pale)}
+  .dark .gbar .tr{height:10px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+  .dark .gbar em{font-style:normal;text-align:right;color:#C9E3EC}
+  .dark .gnote{font-size:13px;color:var(--pale);margin:2px 0 0}
   .seg4 button{font-size:14px;padding:0 4px}
   .names{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px}
   .names button{min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font-weight:700;font-size:15px;padding:0 4px}
@@ -157,13 +165,14 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.6.0', NEED_SHELL = 1, REP_M = 0.4;
-const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈' };
-const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise'];
+const VER = '0.7.0', NEED_SHELL = 1, REP_M = 0.4;
+const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
+const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
+const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
 const isT = function(x){ return x === 'plank' || x === 'balance'; };   // 시간으로 세는 종목
 const secLabel = function(v){ return v >= 60 ? (v / 60 | 0) + '분' + (v % 60 ? ' ' + v % 60 + '초' : '') : v + '초'; };
 const taskText = function(t){ return EXN[t.ex] + ' ' + (isT(t.ex) ? secLabel(t.reps) : t.reps + '회') + ' × ' + t.sets + '세트'; };
-function exSeg(cur, idp){ return '<div class="seg seg4">' + EXK.map(function(k){ return '<button data-' + idp + '="' + k + '" class="' + (k === cur ? 'on' : '') + '">' + EXN[k] + '</button>'; }).join('') + '</div>'; }
+function exSeg(cur, idp){ return '<div class="segg">' + GROUPS.map(function(g){ return '<div class="sgrp"><b>' + g[0] + '</b><div class="seg seg4">' + g[1].map(function(k){ return '<button data-' + idp + '="' + k + '" class="' + (k === cur ? 'on' : '') + '">' + EXN[k] + '</button>'; }).join('') + '</div></div>'; }).join('') + '</div>'; }
 const Q = {}; new URLSearchParams(location.search).forEach(function(v, k){ Q[k] = v; });
 const APP = { shell: '' };
 (function(){ let s = Q.s || ''; try { if (s) localStorage.setItem('wd_shell', s); else s = localStorage.getItem('wd_shell') || ''; } catch (e) {} APP.shell = s; })();
@@ -253,6 +262,7 @@ function renderMain(d){
       '<div class="row"><span>이번 주 다이버왕</span>' + lead(d.leaders.week && { name: d.leaders.week.name, value: meters(d.leaders.week.value) }, 'm') + '</div>' +
       '<div class="row"><span>오늘의 다이버왕</span>' + lead(d.leaders.today && { name: d.leaders.today.name, value: meters(d.leaders.today.value) }, 'm') + '</div>' +
       '<div class="row"><span>꾸준히 1위</span>' + lead(d.leaders.streak, '일 연속') + '</div></section>' +
+    weekGroupsCard(d.weekGroups || []) +
     '<section class="dark"><h2>오늘의 한마디</h2><p class="msg">' + esc(msg) + '</p>' +
       '<div class="stat"><span>등록 학생 <b>' + students.length + '</b>명</span><span>오늘 기록 <b>' + d.todayCount + '</b>건</span></div></section>' +
     '<section class="dark"><h2>오늘 들어온 기록</h2>' + (d.todayList.length ? d.todayList.map(function(r){ return '<div class="rec"><span>' + esc(r.time) + '</span><b>' + esc(r.name) + '</b><span style="color:#C9E3EC;width:auto">' + esc(r.ex) + '</span><em>' + esc(String(r.reps).split(',').join('·')) + ' = ' + r.total + (r.unit || '회') + '</em></div>'; }).join('') : '<p class="hint" style="color:var(--pale)">오늘 첫 기록을 기다려요</p>') + '</section>' +
@@ -261,6 +271,14 @@ function renderMain(d){
   document.querySelectorAll('[data-mex]').forEach(function(b){ b.onclick = function(){ MAIN.ex = b.getAttribute('data-mex'); renderMain(MAIN.data); }; });
   document.querySelectorAll('#names button').forEach(function(b){ b.onclick = function(){ MAIN.sid = b.getAttribute('data-sid'); renderMain(MAIN.data); }; });
   if ($('goCam')) $('goCam').onclick = function(){ if (sel) location.href = checkerUrl(sel, { ex: MAIN.ex, reps: isT(MAIN.ex) ? (st.plankSec || 30) : st.reps, sets: st.sets, rest: st.rest }, '', link('main')); };
+}
+/* 이번 주 부위별 — 골고루 하도록 가장 적은 묶음을 알려 줌 (값은 회 단위, 시간 종목은 2초 = 1회) */
+function weekGroupsCard(g){
+  if (!g.length) return '';
+  const max = Math.max(1, ...g.map(function(x){ return x.value; })), sum = g.reduce(function(a, x){ return a + x.value; }, 0);
+  const low = sum > 0 ? g.slice().sort(function(a, b){ return a.value - b.value; })[0] : null;
+  return '<section class="dark"><h2>이번 주 부위별</h2>' + g.map(function(x){ return '<div class="gbar"><span>' + esc(x.name) + '</span><div class="tr"><i style="width:' + (x.value / max * 100).toFixed(1) + '%"></i></div><em>' + fmt(Math.round(x.value)) + '회</em></div>'; }).join('') +
+    '<p class="gnote">' + (low ? esc(low.name) + ' 운동이 조금 적어요. 골고루 해 봐요!' : '이번 주 첫 운동을 기다려요') + '</p></section>';
 }
 function checkerUrl(student, task, room, back){
   const u = new URL(ROOT + 'checker/');

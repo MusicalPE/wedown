@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.6.0</title>
+<title>위 Down 맨몸 판정기 v0.7.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -34,7 +34,15 @@
   header .sub{font-size:14px;color:var(--muted);font-weight:500}
   .ver{font-size:12px;font-weight:700;color:var(--sea-ink);background:var(--sea-soft);border-radius:99px;padding:3px 9px;margin-left:8px;vertical-align:3px}
   header .spacer{flex:1}
-  .tabs{display:flex;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px;gap:4px}
+  .tabs{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px;gap:4px}
+  .grow,.erow{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+  .grow button,.erow button{white-space:nowrap;flex:1 0 auto;padding:6px 12px!important}
+  .grow button{min-height:36px!important;font-size:13px!important;color:var(--muted)}
+  .grow button.on{background:var(--sea-soft)!important;color:var(--sea-ink)!important}
+  .exGroups{display:flex;flex-direction:column;gap:4px}
+  .exGroup{display:flex;flex-direction:column;gap:8px}
+  .exGroup h4{margin:6px 0 0;font-size:14px;color:var(--sea-ink)}
+  .exPick .also{font-size:11px;color:var(--sea-ink);font-weight:700}
   .tabs button{min-height:44px;padding:8px 16px;border:0;border-radius:12px;background:transparent;font-size:15px}
   .tabs button.on{background:var(--navy);color:#fff}
   .hbtn{font-size:15px;padding:10px 14px;min-height:46px}
@@ -100,6 +108,7 @@
   .steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
   .steps li{display:flex;gap:12px;font-size:15px;line-height:1.55;color:var(--ink2)}
   .steps li>span{flex:none;width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800;margin-top:1px}
+  .steps em{font-style:normal;font-weight:800;color:var(--sea-ink);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .cover .small{font-size:13px;color:var(--muted)}
   .err{color:#B2412A;font-weight:700;font-size:14px}
   .peersRow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 12px;min-width:0}
@@ -199,17 +208,8 @@
     </div>
     <div class="spacer"></div>
     <div class="tabs" role="group" aria-label="운동 고르기">
-      <button id="tabSquat" data-ex="squat" class="on">스쿼트</button>
-      <button id="tabJack" data-ex="jack">점핑잭</button>
-      <button id="tabLunge" data-ex="lunge">런지</button>
-      <button id="tabBurpee" data-ex="burpee">버피</button>
-      <button data-ex="pushup">팔굽혀펴기</button>
-      <button data-ex="situp">윗몸일으키기</button>
-      <button data-ex="plank">플랭크</button>
-      <button data-ex="highknee">무릎 들기</button>
-      <button data-ex="balance">외발 서기</button>
-      <button data-ex="climber">마운틴 클라이머</button>
-      <button data-ex="legraise">레그 레이즈</button>
+      <div class="grow" id="grpRow"></div>
+      <div class="erow" id="exRow"></div>
     </div>
     <button class="hbtn" id="btnLog">기록장</button>
     <button class="hbtn" id="btnFull">전체 화면</button>
@@ -357,6 +357,14 @@
         <svg viewBox="0 0 64 64"><circle cx="10" cy="46" r="5"/><path d="M15 48 L38 50 L52 18 M20 50 L30 52"/></svg>
         레그 레이즈<span>누워서 다리 들기</span>
       </button>
+      <button data-ex="wallpush">
+        <svg viewBox="0 0 64 64"><path d="M54 6 V58"/><circle cx="22" cy="14" r="5"/><path d="M24 20 L32 54 M27 30 L40 34 L52 30 M32 54 L28 58"/></svg>
+        벽 팔굽혀펴기<span>벽 짚고 굽혔다 펴기</span>
+      </button>
+      <button data-ex="kneepush">
+        <svg viewBox="0 0 64 64"><circle cx="12" cy="30" r="5"/><path d="M17 33 L44 44 L56 38 M22 34 L20 46 M44 44 L44 46"/></svg>
+        무릎 팔굽혀펴기<span>무릎 대고 굽혔다 펴기</span>
+      </button>
     </div>
     <ol class="steps" id="steps"></ol>
     <div class="err" id="coverErr"></div>
@@ -384,7 +392,8 @@ const LEVELS={
   highknee:{easy:-0.45, normal:-0.3, hard:-0.15}, // 무릎 높이 들기: (엉덩이 높이 - 무릎 높이) ÷ 허벅지 길이 가 이보다 커야 1회 (0 = 엉덩이 높이)
   balance:{easy:0.07, normal:0.1, hard:0.15},    // 외발 서기: 두 발목 높이 차이 ÷ 다리 길이 가 이보다 커야 '한 발 든 것'
   climber:{easy:125, normal:110, hard:95},       // 마운틴 클라이머: 어깨-엉덩이-무릎 각도가 이보다 작아져야(무릎을 가슴 쪽으로) 1회
-  legraise:{easy:45, normal:60, hard:75}         // 레그 레이즈: 다리가 바닥에서 이 각도(도)까지 올라가야 1회
+  legraise:{easy:45, normal:60, hard:75},        // 레그 레이즈: 다리가 바닥에서 이 각도(도)까지 올라가야 1회
+  wallpush:{easy:0.35, normal:0.5, hard:0.65}    // 벽 팔굽혀펴기: 팔꿈치를 굽힌 정도(0 다 폄 ~ 1 직각 가까이)
 };
 function Counter(){ this.resetBase(); }
 Counter.prototype.resetBase=function(){ this.count=0; this.best=0; this.streak=0; this.lastRep=-99; this.times=[]; this.partial=0; this.fast=0; this.why=''; this.whyT=-99; this.visible=false; this.full=false; this.meter=0; this.phase=''; this.lastT=0; };
@@ -577,7 +586,7 @@ function angleAt(a,b,c){ const v1=[a.x-b.x,a.y-b.y], v2=[c.x-b.x,c.y-b.y]; const
 const seen=(lm,i,th)=>lm[i]&&(lm[i].visibility===undefined||lm[i].visibility>(th||0.4));
 
 /* 팔굽혀펴기: 몸이 바닥과 나란한 채로(옆모습) 팔꿈치를 굽혀 어깨가 손 쪽으로 내려갔다가 다시 펴면 1회 */
-function PushupJudge(level){ Counter.call(this); this.setLevel(level||'normal'); this.reset(); }
+function PushupJudge(level,knee){ Counter.call(this); this.knee=!!knee; this.setLevel(level||'normal'); this.reset(); }
 PushupJudge.prototype=Object.create(Counter.prototype);
 PushupJudge.prototype.setLevel=function(l){ this.th=LEVELS.pushup[l]||0.5; };
 PushupJudge.prototype.line=function(){ return this.th; };
@@ -585,11 +594,11 @@ PushupJudge.prototype.reset=function(){ this.resetBase(); this.g0=null; this.gs=
 PushupJudge.prototype.push=function(t,lm){
   this.lastT=t; const J=sideOf(lm);
   this.visible=seen(lm,J.S)||seen(lm,0);
-  const A=seen(lm,J.A)?J.A:J.K;
+  const A=this.knee?J.K:(seen(lm,J.A)?J.A:J.K);    // 무릎 대고 할 때는 어깨~무릎 선을 봄
   this.full=[J.S,J.E,J.W,J.H].every(i=>seen(lm,i))&&seen(lm,A);
   if(!this.full) return this.state();
   const S=lm[J.S],E=lm[J.E],W=lm[J.W],F=lm[A];
-  this.horiz=Math.abs(F.y-S.y)<0.7*Math.abs(F.x-S.x)&&Math.abs(F.x-S.x)>0.12;   // 어깨~발 선이 35°보다 눕혀져 있어야 엎드린 것
+  this.horiz=Math.abs(F.y-S.y)<(this.knee?1.0:0.7)*Math.abs(F.x-S.x)&&Math.abs(F.x-S.x)>(this.knee?0.08:0.12);   // 어깨~발(무릎) 선이 눕혀져 있어야 엎드린 것 (무릎 대면 45°까지)
   if(!this.horiz){ if(this.phase==='down') this.phase='up'; this.meter=0; return this.state(); }
   const arm=Math.max(0.03,dist(S,E)+dist(E,W)), g=(W.y-S.y)/arm, ang=angleAt(S,E,W);
   this.gs=this.gs===null?g:this.gs+(g-this.gs)*0.5;
@@ -783,10 +792,38 @@ LegRaiseJudge.prototype.push=function(t,lm){
   return this.state();
 };
 LegRaiseJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this); s.pose=this.pose; return s; };
+function KneePushJudge(level){ PushupJudge.call(this,level,true); }
+KneePushJudge.prototype=Object.create(PushupJudge.prototype);
+
+/* 벽 짚고 팔굽혀펴기: 서서 손을 어깨 높이로 벽에 짚고(옆모습), 팔꿈치를 굽혀 몸이 벽 쪽으로 갔다가 다시 펴면 1회 */
+function WallPushJudge(level){ Counter.call(this); this.setLevel(level||'normal'); this.reset(); }
+WallPushJudge.prototype=Object.create(Counter.prototype);
+WallPushJudge.prototype.setLevel=function(l){ this.th=LEVELS.wallpush[l]||0.5; };
+WallPushJudge.prototype.line=function(){ return this.th; };
+WallPushJudge.prototype.reset=function(){ this.resetBase(); this.phase='up'; this.downT=0; this.maxPart=0; this.onWall=false; this.ready=true; };
+WallPushJudge.prototype.push=function(t,lm){
+  this.lastT=t; const J=sideOf(lm);
+  this.visible=seen(lm,J.S)||seen(lm,0);
+  this.full=[J.S,J.E,J.W,J.H].every(i=>seen(lm,i));
+  if(!this.full) return this.state();
+  const S=lm[J.S],E=lm[J.E],W=lm[J.W],H=lm[J.H];
+  const arm=Math.max(0.03,dist(S,E)+dist(E,W)), ang=angleAt(S,E,W);
+  const standing=H.y-S.y>0.6*Math.abs(H.x-S.x);                       // 몸통이 서 있음 (살짝 기울어도 됨)
+  this.onWall=standing&&Math.abs(W.y-S.y)<0.45*arm&&Math.abs(W.x-S.x)>0.25*arm;   // 손이 어깨 높이로 앞을 짚음
+  if(!this.onWall){ this.meter=0; if(this.phase==='down') this.phase='up'; return this.state(); }
+  const d=Math.max(0,Math.min(1.3,(165-ang)/75));
+  this.meter=d;
+  if(this.phase==='up'){
+    if(d>this.th){ this.phase='down'; this.downT=t; }
+    else { if(d>this.maxPart) this.maxPart=d; if(d<0.12){ if(this.maxPart>this.th*0.55) this.hint(t,'shallow'); this.maxPart=0; } }
+  } else if(d<0.2){ this.phase='up'; this.maxPart=0; if(t-this.downT>=0.3) this.rep(t); else this.hint(t,'fast'); }
+  return this.state();
+};
+WallPushJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this); s.onWall=this.onWall; return s; };
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.6.0', REP_M=0.4;
+const VER='0.7.0', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
@@ -808,13 +845,27 @@ const EX={
     steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 엎드려요. 머리부터 발까지 화면에 들어오게 해요.','팔을 바닥에 세워 짚고, <b>무릎을 가슴 쪽으로</b> 번갈아 당겼다 펴요. 한 번 당길 때마다 1회예요.','엉덩이가 너무 솟지 않게, 몸은 비스듬한 한 줄로 유지해요.']},
   legraise:{name:'레그 레이즈', obj:'레그 레이즈를', lab:'지금까지 한 레그 레이즈', meterL:'다리를 든 각도', meterR:'선을 넘으면 1회, 내려야 다음 회', partK:'덜 든', sub:'누워서 다리를 편 채로 들어 올렸다 내리면 1회',
     steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 바로 누워요. 머리부터 발까지 화면에 들어오게 해요.','<b>다리를 편 채로</b> 기준 각도까지 들어 올리면 1회예요. 다시 바닥 가까이 내려야 다음 회를 세요.','무릎을 굽히면 <em>"다리를 펴요"</em>, 덜 올리면 <em>"조금 더 올려요"</em>가 떠요. 허리가 아프면 쉬어요.']},
+  wallpush:{name:'벽 팔굽혀펴기', obj:'벽 팔굽혀펴기를', lab:'지금까지 한 벽 팔굽혀펴기', meterL:'팔을 굽힌 정도', meterR:'선을 넘고 팔을 펴면 1회', partK:'덜 굽힌', sub:'벽을 짚고 팔을 굽혀 몸을 벽 쪽으로 갔다가 다시 펴면 1회',
+    steps:['벽에서 <b>한 걸음 반</b> 떨어져 서서 <b>손을 어깨 높이로</b> 벽에 짚어요. 기기는 <b>옆에서</b> 몸 전체가 보이게 놓아요.','몸을 곧게 편 채 <b>팔꿈치를 굽혀 가슴을 벽 쪽으로</b> 갔다가, <b>팔을 다 펴면</b> 1회예요.','팔굽혀펴기가 어려운 친구도 할 수 있어요. 익숙해지면 무릎 팔굽혀펴기로 올라가요.']},
+  kneepush:{name:'무릎 팔굽혀펴기', obj:'무릎 팔굽혀펴기를', lab:'지금까지 한 무릎 팔굽혀펴기', meterL:'내려간 깊이', meterR:'선을 넘고 팔을 펴면 1회', partK:'덜 내려간', sub:'무릎을 바닥에 대고 몸을 곧게 펴서 팔을 굽혔다 펴면 1회',
+    steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 엎드려 <b>무릎을 바닥에</b> 대요.','머리~엉덩이~무릎을 한 줄로 펴고 <b>팔꿈치를 굽혀 가슴을 바닥 쪽으로</b> 내렸다가, <b>팔을 다 펴면</b> 1회예요.','익숙해지면 무릎을 떼고 팔굽혀펴기로 올라가요.']},
   burpee:{name:'버피', obj:'버피를', lab:'지금까지 한 버피', meterL:'엎드리기 → 일어나기 → 만세 점프', meterR:'세 단계를 다 하면 1회', partK:'덜 한', sub:'엎드려 버티기 → 일어나기 → 만세 점프까지 이어지면 1회',
     steps:['<b>옆으로</b> 서서 엎드렸을 때도 몸이 다 보이게 기기를 <b>3m쯤</b> 떨어뜨려 놓아요.','쪼그려 손 짚고 다리를 뒤로 뻗어 <b>엎드려 버티기</b> → 다리를 당겨 일어나며 <b>만세 점프</b>까지 하면 1회예요.','엎드리지 않거나 만세 점프 없이 일어나면 세지 않아요. 기준 <b>쉽게</b>는 점프를 보지 않아요.']},
   jack:{name:'점핑잭', obj:'점핑잭을', lab:'지금까지 한 점핑잭', meterL:'어깨 → 차렷 → 만세 → 차렷', meterR:'네 박자를 다 하면 1회', partK:'덜 한', sub:'어깨 높이 → 차렷 → 만세 → 차렷, 네 박자가 1회',
     steps:['<b>정면</b>을 보고 <b>머리부터 발까지</b> 다 보이게 서요. 옆 친구는 화면 밖으로.','<b>① 다리 벌리고 팔은 어깨 높이로 옆으로 쭉</b> → <b>② 차렷</b> → <b>③ 다리 벌리고 만세(팔 머리 위로 쭉)</b> → <b>④ 차렷</b>','박자마다 <b>두 발로 콩 뛰면서</b> 네 박자를 순서대로 다 하면 1회. 걸어서 발을 옮기면 <em>"콩콩 뛰면서 해요"</em>, 팔만 하면 <em>"다리도 벌려요"</em>, 순서가 바뀌면 다음 할 동작을 알려 줘요.']}
 };
 const Q=new URLSearchParams(location.search);
-const EXS=['squat','jack','lunge','burpee','pushup','situp','plank','highknee','balance','climber','legraise'];
+const EXS=['squat','jack','lunge','burpee','pushup','situp','plank','highknee','balance','climber','legraise','wallpush','kneepush'];
+/* 부위별 묶음 — 같은 묶음 안에서는 쉬운 것부터 */
+const GROUPS=[
+  {k:'legs', name:'다리·엉덩이', ex:['squat','lunge']},
+  {k:'arms', name:'팔·가슴', ex:['wallpush','kneepush','pushup']},
+  {k:'core', name:'배(코어)', ex:['situp','legraise','plank']},
+  {k:'bal', name:'균형', ex:['balance']},
+  {k:'cardio', name:'유산소', ex:['jack','highknee','burpee','climber']}
+];
+const ALSO={burpee:'전신', climber:'코어도'};
+const groupOf=x=>GROUPS.find(g=>g.ex.indexOf(x)>=0)||GROUPS[0];
 const TIMED={plank:1,balance:1}; const isT=x=>!!TIMED[x||ex];   // 시간으로 세는 종목(초) — 바다 깊이는 2초 = 1회
 let ex=EXS.indexOf(Q.get('ex'))>0?Q.get('ex'):'squat', level='normal';
 /* 학교 연결 모드: 학교 메인·운동방에서 이름을 골라 열면 s(학교 시트)·sid(학생)·계획이 주소에 실려 옴 */
@@ -829,11 +880,28 @@ function srpc(fn,args,retried){
 }
 function roomSignal(finished){ if(LINK.on&&LINK.room) srpc('roomProgress',[LINK.room,LINK.sid,LINK.task,S.done.length,!!finished]).catch(()=>{}); }
 let judge=null;
-const JUDGES={squat:SquatJudge,jack:JackJudge,lunge:LungeJudge,burpee:BurpeeJudge,pushup:PushupJudge,situp:SitupJudge,plank:PlankJudge,highknee:HighKneeJudge,balance:BalanceJudge,climber:ClimberJudge,legraise:LegRaiseJudge};
+const JUDGES={squat:SquatJudge,jack:JackJudge,lunge:LungeJudge,burpee:BurpeeJudge,pushup:PushupJudge,situp:SitupJudge,plank:PlankJudge,highknee:HighKneeJudge,balance:BalanceJudge,climber:ClimberJudge,legraise:LegRaiseJudge,wallpush:WallPushJudge,kneepush:KneePushJudge};
 function makeJudge(){ judge=new (JUDGES[ex]||SquatJudge)(level); }
 const REPM=()=>isT()?REP_M/2:REP_M;   // 시간 종목은 2초 = 1회(40cm)
 const UNIT=()=>isT()?'초':'회';
+let grpSel=null;
+function buildTabs(){
+  const g=grpSel||groupOf(ex).k;
+  $('grpRow').innerHTML=GROUPS.map(x=>'<button data-grp="'+x.k+'" class="'+(x.k===g?'on':'')+'">'+x.name+'</button>').join('');
+  $('exRow').innerHTML=GROUPS.find(x=>x.k===g).ex.map(k=>'<button data-ex="'+k+'" class="'+(k===ex?'on':'')+'">'+EX[k].name+'</button>').join('');
+  document.querySelectorAll('#grpRow [data-grp]').forEach(b=>b.onclick=()=>{ if(active()||LINK.on) return; grpSel=b.getAttribute('data-grp'); buildTabs(); });
+  document.querySelectorAll('#exRow [data-ex]').forEach(b=>{ b.onclick=()=>setEx(b.getAttribute('data-ex')); b.disabled=active()||LINK.on; });
+}
+(function groupPicks(){
+  const box=document.querySelector('.exPick'), btns={};
+  box.querySelectorAll('[data-ex]').forEach(b=>btns[b.getAttribute('data-ex')]=b);
+  box.className='exGroups';
+  GROUPS.forEach(g=>{ const sec=document.createElement('div'); sec.className='exGroup'; sec.innerHTML='<h4>'+g.name+'</h4><div class="exPick"></div>';
+    g.ex.forEach(k=>{ const b=btns[k]; if(!b) return; if(ALSO[k]){ const a=document.createElement('span'); a.className='also'; a.textContent=ALSO[k]; b.appendChild(a); } sec.lastChild.appendChild(b); });
+    box.appendChild(sec); });
+})();
 function applyEx(){
+  grpSel=null; buildTabs();
   const e=EX[ex];
   document.querySelectorAll('[data-ex]').forEach(b=>b.classList.toggle('on',b.getAttribute('data-ex')===ex));
   $('meterL').textContent=e.meterL; $('meterR').textContent=e.meterR; $('partK').textContent=e.partK; $('sub').textContent=e.sub;
@@ -889,7 +957,7 @@ function draw(lm,st){
   cx.clearRect(0,0,cv.width,cv.height);
   if(!lm) return;
   const P=i=>[lm[i].x*cv.width,lm[i].y*cv.height];
-  const hot=((ex==='squat'||ex==='lunge')&&st.phase==='down')||(ex==='jack'&&(st.step===1||st.step===3))||(ex==='burpee'&&st.step>0)||(ex==='pushup'&&st.phase==='down')||(ex==='situp'&&st.phase==='up')||(ex==='plank'&&st.good)||(ex==='balance'&&st.good)||((ex==='highknee'||ex==='climber')&&st.phase==='down')||(ex==='legraise'&&st.phase==='up');
+  const hot=((ex==='squat'||ex==='lunge')&&st.phase==='down')||(ex==='jack'&&(st.step===1||st.step===3))||(ex==='burpee'&&st.step>0)||((ex==='pushup'||ex==='kneepush'||ex==='wallpush')&&st.phase==='down')||(ex==='situp'&&st.phase==='up')||(ex==='plank'&&st.good)||(ex==='balance'&&st.good)||((ex==='highknee'||ex==='climber')&&st.phase==='down')||(ex==='legraise'&&st.phase==='up');
   cx.lineWidth=Math.max(4,cv.width/130); cx.lineCap='round';
   cx.strokeStyle=hot?'#5FE0F0':'rgba(255,255,255,.9)';
   BONES.forEach(([a,b])=>{ if((lm[a].visibility??1)<0.4||(lm[b].visibility??1)<0.4) return; cx.beginPath(); cx.moveTo(...P(a)); cx.lineTo(...P(b)); cx.stroke(); });
@@ -1001,7 +1069,7 @@ function setButtons(){
   document.body.classList.toggle('running',on);
   $('btnStart').textContent=on?'그만하기':'시작'; $('btnStart').classList.toggle('warn',on); $('btnStart').classList.toggle('primary',!on);
   ['pReps','pSets','pRest','level'].forEach(id=>$(id).disabled=on||(LINK.on&&id!=='level'));
-  document.querySelectorAll('[data-ex]').forEach(b=>b.disabled=on||LINK.on);
+  document.querySelectorAll('[data-ex],[data-grp]').forEach(b=>b.disabled=on||LINK.on);
 }
 setInterval(()=>{
   const now=performance.now();
@@ -1037,7 +1105,7 @@ function paint(st,t){
   else if(!st.visible) set('카메라 앞에 서 주세요','wait');
   else if(!st.full) set(ex==='jack'?'머리부터 발까지 다 보이게 서요':'발까지 다 보이게 조금 뒤로 물러서요','wait');
   else if(!st.ready) set(st.moved?'자리가 바뀌었어요 — 똑바로 서서 잠깐만':'똑바로 서서 잠깐 기다려요','wait');
-  else if(recent&&st.why==='shallow') set(ex==='pushup'?'조금 더 내려가요!':ex==='lunge'?'무릎을 더 내려요!':'조금 더 깊이 앉아요!','hint');
+  else if(recent&&st.why==='shallow') set(ex==='pushup'||ex==='kneepush'?'조금 더 내려가요!':ex==='wallpush'?'팔을 조금 더 굽혀요!':ex==='lunge'?'무릎을 더 내려요!':'조금 더 깊이 앉아요!','hint');
   else if(recent&&st.why==='legs') set('다리도 벌려요!','hint');
   else if(recent&&st.why==='arms') set(ex==='jack'&&st.step===0?'팔도 어깨 높이로 쭉!':'팔도 머리 위로 올려요!','hint');
   else if(recent&&st.why==='jump') set('콩콩 뛰면서 해요! 두 발이 같이 떠야 해요','hint');
@@ -1046,6 +1114,8 @@ function paint(st,t){
   else if(ex==='pushup'&&!st.horiz) set('옆모습이 보이게 엎드려 몸을 곧게!','wait');
   else if(recent&&st.why==='higher') set(ex==='legraise'?'조금 더 올려요!':'조금 더 일어나요!','hint');
   else if(recent&&st.why==='straight') set('다리를 펴요!','hint');
+  else if(ex==='wallpush'&&!st.onWall) set('옆모습이 보이게 서서 손을 어깨 높이로 벽에 짚어요','wait');
+  else if(ex==='kneepush'&&!st.horiz) set('옆모습이 보이게 무릎 대고 엎드려요','wait');
   else if(ex==='climber'&&!st.horiz) set('옆모습이 보이게 엎드려 팔을 세워요','wait');
   else if(ex==='legraise'&&st.pose==='sit') set('옆모습이 보이게 바로 누워요','wait');
   else if(recent&&st.why==='split') set('다리를 앞뒤로 벌리고 앉아요!','hint');
@@ -1057,11 +1127,11 @@ function paint(st,t){
   else if(ex==='lunge'&&st.phase==='down') set('좋아요, 이제 일어나요!','good');
   else if(ex==='burpee'&&st.step===1) set('좋아요, 다리 당겨 일어나요!','good');
   else if(ex==='burpee'&&st.step===2) set('만세 점프!','good');
-  else if(ex==='pushup'&&st.phase==='down') set('좋아요, 밀어 올려요!','good');
+  else if((ex==='pushup'||ex==='kneepush'||ex==='wallpush')&&st.phase==='down') set('좋아요, 밀어 올려요!','good');
   else if(ex==='situp'&&st.phase==='up') set('좋아요, 다시 누워요!','good');
   else if(ex==='legraise'&&st.phase==='up') set('좋아요, 천천히 내려요!','good');
   else if(ex==='situp'&&st.phase==='wait') set('옆모습이 보이게 누워 무릎을 세워요','wait');
-  else if(setCount()===0) set({squat:'앉았다 일어나요!',jack:'다리 벌리고 팔은 어깨 높이로!',lunge:'한 발 내딛고 뒷무릎을 내려요!',burpee:'쪼그려 손 짚고 다리를 뒤로 쭉!',pushup:'팔을 굽혀 가슴을 바닥 쪽으로!',situp:'상체를 일으켜요!',plank:'몸을 곧게 버텨요!',highknee:'무릎을 엉덩이 높이까지!',balance:'한 발을 들어요!',climber:'무릎을 가슴 쪽으로 번갈아!',legraise:'다리를 편 채로 들어 올려요!'}[ex],'idle');
+  else if(setCount()===0) set({squat:'앉았다 일어나요!',jack:'다리 벌리고 팔은 어깨 높이로!',lunge:'한 발 내딛고 뒷무릎을 내려요!',burpee:'쪼그려 손 짚고 다리를 뒤로 쭉!',pushup:'팔을 굽혀 가슴을 바닥 쪽으로!',situp:'상체를 일으켜요!',plank:'몸을 곧게 버텨요!',highknee:'무릎을 엉덩이 높이까지!',balance:'한 발을 들어요!',climber:'무릎을 가슴 쪽으로 번갈아!',legraise:'다리를 편 채로 들어 올려요!',wallpush:'팔을 굽혀 가슴을 벽 쪽으로!',kneepush:'팔을 굽혀 가슴을 바닥 쪽으로!'}[ex],'idle');
   else if(t-st.lastRep<2.5) set('잘하고 있어요!','good');
   else set('조금만 더 힘내요!','idle');
   const m=Math.max(0,Math.min(1,st.meter/1.2));
@@ -1116,11 +1186,11 @@ applyEx();
 if(LINK.on){
   document.title=LINK.name+' · 위 Down 판정기';
   $('sub').textContent=LINK.name+' · 끝나면 학교 기록에 담겨요';
-  document.querySelector('.tabs').hidden=true; document.querySelector('.exPick').hidden=true;
+  document.querySelector('.tabs').hidden=true; document.querySelector('.exGroups').hidden=true;
   $('endAgain').hidden=!!LINK.room; $('endClose').textContent=LINK.back?'돌아가기':'닫기';
   const who=document.createElement('p'); who.className='who';
   who.innerHTML='<b>'+LINK.name.replace(/[<>&"]/g,'')+'</b> · '+EX[ex].name+' '+(+Q.get('reps')||10)+'회 × '+(+Q.get('sets')||3)+'세트'+(LINK.room?' · 운동방 '+LINK.room.replace(/\D/g,''):'');
-  document.querySelector('.exPick').after(who);
+  document.querySelector('.exGroups').after(who);
   if(LINK.room){
     $('peersRow').hidden=false; $('peerList').innerHTML='<span>불러오는 중…</span>';
     const pollPeers=()=>srpc('roomPoll',[LINK.room,LINK.sid]).then(r=>{

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.7.0</title>
+<title>위 Down 맨몸 판정기 v0.7.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -77,6 +77,8 @@
   .pip .tag{position:absolute;left:10px;top:10px;background:rgba(14,42,68,.7);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px}
   .pip .fps{position:absolute;right:10px;top:10px;background:rgba(14,42,68,.5);color:#fff;font-size:11px;padding:3px 8px;border-radius:99px}
   .pip.big{position:fixed;right:22px;bottom:90px;width:min(70vw,80vh);z-index:20}
+  .pipCount{position:absolute;left:0;right:0;bottom:0;padding:10px 12px;background:rgba(14,42,68,.72);color:#fff;font-weight:900;font-size:clamp(36px,9vh,64px);line-height:1;text-align:center;letter-spacing:-.03em;pointer-events:none}
+  .pipCount small{font-size:.4em;font-weight:700;opacity:.85}
   .nocam{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#9FB6C8;font-size:14px;line-height:1.5}
 
   .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
@@ -184,7 +186,8 @@
     .fspacer{display:none}
     .burst{font-size:40px}
     body.running .stage{grid-template-columns:1fr;margin:0}
-    body.running .pip{width:min(92vw,52vh)}
+    body.running .pip{width:min(92vw,36vh)}
+    body.running .camSlot{justify-content:center}
     body.running .main{padding:10px 8px}
     body.running .count{font-size:min(14vh,26vw)}
     .cdNum{font-size:min(16vh,26vw)} .cdLab{font-size:16px} .cdSub{font-size:12px} #cdSkip{min-height:40px;padding:6px 12px;font-size:13px;margin-top:8px}
@@ -241,6 +244,7 @@
         <video id="video" playsinline muted autoplay></video>
         <canvas id="overlay"></canvas>
         <span class="tag">내 모습</span><span class="fps" id="fps"></span>
+        <div class="pipCount" id="pipCount" hidden></div>
         <div class="nocam" id="nocam">카메라를 켜면<br>여기에 내 모습이 나와요</div>
       </div>
     </aside>
@@ -684,7 +688,7 @@ function HighKneeJudge(level){ Counter.call(this); this.setLevel(level||'normal'
 HighKneeJudge.prototype=Object.create(Counter.prototype);
 HighKneeJudge.prototype.setLevel=function(l){ this.th=LEVELS.highknee[l]??-0.3; };
 HighKneeJudge.prototype.line=function(){ return (this.th+1)*1.2/1.2; };
-HighKneeJudge.prototype.reset=function(){ this.resetBase(); this.thigh=null; this.up={L:false,R:false}; this.ready=false; this.n=0; this.left=0; this.right=0; };
+HighKneeJudge.prototype.reset=function(){ this.resetBase(); this.thigh=null; this.up={L:false,R:false}; this.got={L:false,R:false}; this.ready=false; this.n=0; this.left=0; this.right=0; };
 HighKneeJudge.prototype.push=function(t,lm){
   this.lastT=t; this.visible=seen(lm,11)||seen(lm,12)||seen(lm,0);
   this.full=[23,24,25,26].every(i=>seen(lm,i,0.5));
@@ -697,7 +701,8 @@ HighKneeJudge.prototype.push=function(t,lm){
   this.meter=Math.max(0,Math.min(1.2,best+1));     // -1(서 있음) → 0, 0(엉덩이 높이) → 1
   if(!this.ready) return this.state();
   ['L','R'].forEach(k=>{
-    if(!this.up[k]&&lifts[k]>this.th){ this.up[k]=true; if(t-this.lastRep>=0.15){ this.rep(t); if(k==='L') this.left++; else this.right++; } }
+    if(!this.up[k]&&lifts[k]>this.th){ this.up[k]=true; if(k==='L') this.left++; else this.right++; this.got[k]=true;
+      if(this.got.L&&this.got.R){ this.rep(t); this.got={L:false,R:false}; } }   // 왼쪽·오른쪽 한 번씩 들어야 1회
     else if(this.up[k]&&lifts[k]<this.th-0.35) this.up[k]=false;
   });
   this.phase=(this.up.L||this.up.R)?'down':'up';
@@ -823,7 +828,7 @@ WallPushJudge.prototype.state=function(){ const s=Counter.prototype.state.call(t
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.7.0', REP_M=0.4;
+const VER='0.7.1', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
@@ -837,8 +842,8 @@ const EX={
     steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 누워 <b>무릎을 세워요</b>. 머리부터 무릎까지 화면에 들어오게 해요.','등이 바닥에 닿게 누웠다가 <b>상체를 일으켜</b> 선을 넘으면 1회예요.','다시 누워야 다음 회를 세요. 덜 일어나면 <em>"조금 더 일어나요"</em>가 떠요.']},
   plank:{name:'플랭크', obj:'플랭크를', lab:'버틴 시간', meterL:'몸이 곧은 정도', meterR:'선을 넘는 동안 초가 올라가요', partK:'자세 고침', sub:'몸을 곧게 버티는 동안만 초가 올라가요',
     steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 엎드려요. 머리부터 발까지 화면에 들어오게 해요.','팔을 바닥에 <b>수직으로 세워</b>(또는 팔꿈치로) 짚고, <b>머리부터 발끝까지 비스듬한 한 줄</b>로 곧게 버텨요. 자세가 맞으면 초가 올라가요.','엉덩이가 처지거나 솟거나, 바닥에 엎드리면 초가 멈추고 알려 줘요. 바로잡으면 이어서 올라가요.']},
-  highknee:{name:'무릎 높이 들기', obj:'무릎 높이 들기를', lab:'지금까지 든 무릎', meterL:'무릎 높이', meterR:'선을 넘으면 1회 (왼쪽·오른쪽 각각)', partK:'덜 든', sub:'제자리에서 달리듯 무릎을 엉덩이 높이까지 번갈아 들면 1회씩',
-    steps:['기기에서 <b>2~3m</b> 떨어져 <b>엉덩이와 무릎</b>이 잘 보이게 서요. 앞이나 옆, 어느 쪽을 봐도 돼요.','제자리에서 달리듯 <b>무릎을 엉덩이 높이까지</b> 번갈아 들어요. 한 번 들 때마다 1회예요.','팔도 같이 흔들면 더 좋아요. 무릎이 덜 올라오면 세지 않아요.']},
+  highknee:{name:'무릎 높이 들기', obj:'무릎 높이 들기를', lab:'지금까지 든 무릎', meterL:'무릎 높이', meterR:'왼쪽·오른쪽 한 번씩 선을 넘으면 1회', partK:'덜 든', sub:'제자리에서 달리듯 무릎을 엉덩이 높이까지 왼쪽·오른쪽 한 번씩 들면 1회',
+    steps:['기기에서 <b>2~3m</b> 떨어져 <b>엉덩이와 무릎</b>이 잘 보이게 서요. 앞이나 옆, 어느 쪽을 봐도 돼요.','제자리에서 달리듯 <b>무릎을 엉덩이 높이까지</b> 번갈아 들어요. <b>왼쪽·오른쪽 한 번씩</b> 들면 1회예요.','팔도 같이 흔들면 더 좋아요. 무릎이 덜 올라오면 세지 않아요.']},
   balance:{name:'외발 서기', obj:'외발 서기를', lab:'버틴 시간', meterL:'발을 든 높이', meterR:'선을 넘는 동안 초가 올라가요', partK:'자세 고침', sub:'한 발을 들고 버티는 동안 초가 올라가요 (왼발·오른발 따로 셈)',
     steps:['기기에서 <b>2~3m</b> 떨어져 <b>머리부터 발까지</b> 보이게 서요.','몸을 곧게 세우고 <b>한 발을 들어</b> 버텨요. 발을 든 동안 초가 올라가요.','발이 바닥에 닿으면 멈췄다가, 다시 들면 이어서 올라가요. 왼발·오른발을 바꿔 가며 해요.']},
   climber:{name:'마운틴 클라이머', obj:'마운틴 클라이머를', lab:'지금까지 당긴 무릎', meterL:'무릎을 당긴 정도', meterR:'선을 넘고 다리를 펴면 1회 (다리마다)', partK:'덜 당긴', sub:'팔을 세운 엎드린 자세에서 무릎을 가슴 쪽으로 번갈아 당기면 1회씩',
@@ -1027,7 +1032,7 @@ function countdown(){
 }
 function startSet(){
   S.mode='set'; S.offset=judge.count; hideOverlay();
-  if(ex==='jack'||ex==='burpee'){ judge.step=0; judge.air=false; } else if(ex==='highknee'){ judge.up={L:false,R:false}; } else if(ex==='climber'){ judge.inL=judge.inR=false; } else if(judge.phase==='down') judge.phase='up';
+  if(ex==='jack'||ex==='burpee'){ judge.step=0; judge.air=false; } else if(ex==='highknee'){ judge.up={L:false,R:false}; judge.got={L:false,R:false}; } else if(ex==='climber'){ judge.inL=judge.inR=false; } else if(judge.phase==='down') judge.phase='up';
   beep(988,0.25,0.25); say('시작'); lastCount=-1; showSet();
 }
 function endSet(){
@@ -1087,6 +1092,7 @@ let lastCount=0;
 function showSet(){
   const c=setCount(), cur=S.mode==='idle'?1:Math.min(S.set,S.sets);
   $('count').innerHTML=c+'<small>/'+S.reps+(isT()?'초':'')+'</small>';
+  $('pipCount').hidden=S.mode!=='set'; $('pipCount').innerHTML=(S.mode==='set'?c+'<small> / '+S.reps+(isT()?'초':'회')+' · '+Math.min(S.set,S.sets)+'세트</small>':'');
   $('lab').textContent=EX[ex].name+' · '+cur+' / '+S.sets+'세트';
   $('depth').textContent='바다로 '+(sessionTotal()*REPM()).toFixed(1)+'m 내려왔어요';
   $('mainCard').style.setProperty('--sea-h',(c/S.reps*70).toFixed(1)+'%');

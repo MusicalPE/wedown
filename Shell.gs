@@ -15,12 +15,12 @@
  * Copyright (c) 2026 음악적체육인. 사용 조건은 https://github.com/MusicalPE/wedown 의 LICENSE 를 봐 주세요.
  *************************************************************/
 
-const SHELL_VERSION = 1;
+const SHELL_VERSION = 2;
 const APP_URL = 'https://musicalpe.github.io/wedown/';
 
 const SHEET_STUDENTS = 'Students';
 const SHEET_RECORDS = 'Records';
-const STUDENTS_HEADER_ = ['ID', 'Number', 'Name', 'SortOrder'];
+const STUDENTS_HEADER_ = ['ID', 'Number', 'Name', 'SortOrder', 'Grade', 'Class', 'PwHash'];   // 2판: 학년·반·비밀번호 칸을 뒤에 덧붙임
 const RECORDS_HEADER_ = ['RecordID', 'Timestamp', 'StudentID', 'Date', 'Time', 'Exercise', 'Target', 'Sets', 'Reps', 'Total', 'Source'];
 const EXERCISES_ = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 // 부위별 묶음 (메인 화면 '이번 주 부위별'에 씀)
@@ -60,7 +60,7 @@ function doGet(e) {
 const RPC_ALLOW_ = [
   'ping', 'getPublic', 'getDashboard', 'getStudentsPublic', 'getStudentToday', 'saveRecord',
   'verifyAdminPassword', 'changeAdminPassword', 'getSettingsAdmin', 'setSettings',
-  'addStudentsBulk', 'renameStudent', 'deleteStudent', 'getRecordsAdmin', 'deleteRecord',
+  'addStudentsBulk', 'renameStudent', 'updateStudent', 'deleteStudent', 'checkStudentPw', 'getRecordsAdmin', 'deleteRecord',
   'roomOpen', 'roomClose', 'roomSendTask', 'roomStatus', 'roomInfo', 'roomJoin', 'roomPoll', 'roomProgress'
 ];
 function doPost(e) {
@@ -99,7 +99,11 @@ function sheet_(name, header) {
   if (!sh) { sh = ss_().insertSheet(name); sh.appendRow(header); sh.setFrozenRows(1); }
   return sh;
 }
-function studentsSheet_() { return sheet_(SHEET_STUDENTS, STUDENTS_HEADER_); }
+function studentsSheet_() {
+  const sh = sheet_(SHEET_STUDENTS, STUDENTS_HEADER_);
+  if (sh.getLastColumn() < STUDENTS_HEADER_.length) sh.getRange(1, 1, 1, STUDENTS_HEADER_.length).setValues([STUDENTS_HEADER_]);   // 1판 시트에 새 칸 이름 붙이기
+  return sh;
+}
 function recordsSheet_() { return sheet_(SHEET_RECORDS, RECORDS_HEADER_); }
 
 function settings_() {
@@ -153,46 +157,71 @@ function setSettings(token, obj) {
 
 /************ 학생 ************/
 function studentRows_() {
-  const v = studentsSheet_().getDataRange().getValues();
+  const sh = studentsSheet_();
+  const v = sh.getRange(1, 1, Math.max(1, sh.getLastRow()), STUDENTS_HEADER_.length).getValues();
   const list = [];
   for (let i = 1; i < v.length; i++) {
     if (!v[i][0]) continue;
-    list.push({ id: String(v[i][0]), number: v[i][1], name: String(v[i][2]), order: Number(v[i][3]) || i });
+    list.push({ id: String(v[i][0]), number: v[i][1], name: String(v[i][2]), order: Number(v[i][3]) || i, grade: v[i][4], cls: v[i][5], pw: String(v[i][6] || '') });
   }
-  list.sort(function (a, b) { return a.order - b.order; });
+  // 학년 → 반 → 번호 → 등록 순서
+  const num = function (x) { return x === '' || x == null ? 9999 : Number(x) || 9999; };
+  list.sort(function (a, b) { return num(a.grade) - num(b.grade) || num(a.cls) - num(b.cls) || num(a.number) - num(b.number) || a.order - b.order; });
   return list;
 }
-function getStudentsPublic() { return studentRows_().map(function (s) { return { id: s.id, number: s.number, name: s.name }; }); }
+function getStudentsPublic() { return studentRows_().map(function (s) { return { id: s.id, number: s.number, name: s.name, grade: s.grade, cls: s.cls, hasPw: !!s.pw }; }); }
+function cleanNum_(x) { const s = String(x == null ? '' : x).replace(/[^\d]/g, ''); return s ? Number(s) : ''; }
 
-// lines: "1 김하늘" 또는 "김하늘" 한 줄에 한 명 (엑셀에서 번호·이름 두 칸을 붙여넣어도 됨)
-function addStudentsBulk(token, text) {
+// rows: [{grade, cls, number, name, pw}] (화면에서 엑셀 붙여넣기를 표로 나눠 보냄) — 옛 화면이 보내는 글(한 줄에 "1 김하늘")도 받음
+// 학년·반·번호·이름이 모두 같은 학생은 이미 있다고 보고 건너뜀. 비밀번호는 비워 두면 묻지 않음
+function addStudentsBulk(token, rows) {
   admin_(token);
+  if (typeof rows === 'string') rows = rows.split(/\r?\n/).map(function (line) {
+    const m = line.trim().match(/^(\d+)[\s\t.,)]+(.+)$/);
+    return m ? { number: m[1], name: m[2] } : { name: line.trim() };
+  });
   const sh = studentsSheet_();
   const cur = studentRows_();
+  const key = function (g, c, n, nm) { return [g, c, n, String(nm).trim()].join('|'); };
+  const have = {}; cur.forEach(function (s) { have[key(s.grade, s.cls, s.number, s.name)] = 1; });
   let order = cur.reduce(function (m, s) { return Math.max(m, s.order); }, 0);
-  const rows = [];
-  String(text || '').split(/\r?\n/).forEach(function (line) {
-    const t = line.trim(); if (!t) return;
-    const m = t.match(/^(\d+)[\s\t.,)]+(.+)$/);
-    const number = m ? Number(m[1]) : '';
-    const name = (m ? m[2] : t).replace(/\t/g, ' ').trim().slice(0, 20);
+  const out = []; let skipped = 0;
+  (rows || []).slice(0, 500).forEach(function (r) {
+    const name = String((r && r.name) || '').replace(/\t/g, ' ').trim().slice(0, 20);
     if (!name) return;
-    rows.push([Utilities.getUuid(), number, name, ++order]);
+    const g = cleanNum_(r.grade), c = cleanNum_(r.cls), n = cleanNum_(r.number);
+    const k = key(g, c, n, name);
+    if (have[k]) { skipped++; return; }
+    have[k] = 1;
+    const pw = String(r.pw || '').trim();
+    out.push([Utilities.getUuid(), n, name, ++order, g, c, pw ? hash_(pw) : '']);
   });
-  if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
-  return { added: rows.length };
+  if (out.length) sh.getRange(sh.getLastRow() + 1, 1, out.length, STUDENTS_HEADER_.length).setValues(out);
+  return { added: out.length, skipped: skipped };
 }
-function renameStudent(token, id, name, number) {
+// o: {grade, cls, number, name, pw, clearPw} — pw를 넣으면 바꾸고, clearPw면 비밀번호를 없앰
+function updateStudent(token, id, o) {
   admin_(token);
-  const sh = studentsSheet_(), v = sh.getDataRange().getValues();
+  o = o || {};
+  const sh = studentsSheet_(), v = sh.getRange(1, 1, sh.getLastRow(), STUDENTS_HEADER_.length).getValues();
   for (let i = 1; i < v.length; i++) {
-    if (String(v[i][0]) === String(id)) {
-      sh.getRange(i + 1, 2, 1, 2).setValues([[number === '' || number == null ? v[i][1] : Number(number), String(name || v[i][2]).slice(0, 20)]]);
-      return { ok: true };
-    }
+    if (String(v[i][0]) !== String(id)) continue;
+    const name = String(o.name != null ? o.name : v[i][2]).trim().slice(0, 20) || v[i][2];
+    const pw = o.clearPw ? '' : (o.pw ? hash_(String(o.pw).trim()) : v[i][6]);
+    sh.getRange(i + 1, 2, 1, 2).setValues([[o.number != null ? cleanNum_(o.number) : v[i][1], name]]);
+    sh.getRange(i + 1, 5, 1, 3).setValues([[o.grade != null ? cleanNum_(o.grade) : v[i][4], o.cls != null ? cleanNum_(o.cls) : v[i][5], pw]]);
+    return { ok: true };
   }
   throw new Error('학생을 찾지 못했어요.');
 }
+function renameStudent(token, id, name, number) { return updateStudent(token, id, { name: name, number: number === '' ? null : number }); }
+// 학생 비밀번호 확인 (비밀번호를 정하지 않은 학생은 늘 통과)
+function studentPwOk_(sid, pw) {
+  const s = studentRows_().filter(function (x) { return x.id === String(sid); })[0];
+  if (!s) throw new Error('학생 정보를 찾지 못했어요.');
+  return !s.pw || hash_(String(pw || '').trim()) === s.pw;
+}
+function checkStudentPw(sid, pw) { return { ok: studentPwOk_(sid, pw) }; }
 function deleteStudent(token, id) {
   admin_(token);
   const sh = studentsSheet_(), v = sh.getDataRange().getValues();
@@ -256,7 +285,7 @@ function getDashboard() {
   // 이번 주(월요일부터)
   const d = new Date(t + 'T12:00:00'), dow = (d.getDay() + 6) % 7, monday = shiftDate_(t, -dow);
   const by = {};
-  students.forEach(function (s) { by[s.id] = { id: s.id, name: s.name, number: s.number, total: 0, today: 0, week: 0, days: {} }; });
+  students.forEach(function (s) { by[s.id] = { id: s.id, name: s.name, number: s.number, grade: s.grade, cls: s.cls, hasPw: !!s.pw, total: 0, today: 0, week: 0, days: {} }; });
   const todayList = [];
   let todayCount = 0;
   const wg = {}; GROUPS_.forEach(function (g) { wg[g[0]] = 0; });
@@ -271,7 +300,7 @@ function getDashboard() {
     const b = by[s.id];
     let streak = 0, day = b.days[t] ? t : shiftDate_(t, -1);
     while (b.days[day]) { streak++; day = shiftDate_(day, -1); }
-    return { id: b.id, name: b.name, number: b.number, total: b.total, today: b.today, week: b.week, streak: streak };
+    return { id: b.id, name: b.name, number: b.number, grade: b.grade, cls: b.cls, hasPw: b.hasPw, total: b.total, today: b.today, week: b.week, streak: streak };
   });
   const top = function (k) { const a = list.filter(function (x) { return x[k] > 0; }).sort(function (x, y) { return y[k] - x[k]; })[0]; return a ? { name: a.name, value: a[k] } : null; };
   const classTotal = list.reduce(function (a, s) { return a + s.total; }, 0);
@@ -322,7 +351,7 @@ function roomStatus(token) {
   const members = st.map(function (s) {
     let m = null; try { m = JSON.parse(got['R_' + c + '_m_' + s.id] || 'null'); } catch (e) {}
     const cur = m && task && m.task === task.id;
-    return { id: s.id, name: s.name, number: s.number, joined: !!m, setsDone: cur ? m.setsDone : 0, finished: cur ? !!m.finished : false, at: m ? m.at : 0 };
+    return { id: s.id, name: s.name, number: s.number, grade: s.grade, cls: s.cls, joined: !!m, setsDone: cur ? m.setsDone : 0, finished: cur ? !!m.finished : false, at: m ? m.at : 0 };
   });
   return { open: true, code: c, task: task, members: members, now: Date.now() };
 }
@@ -330,9 +359,9 @@ function roomInfo(code) {
   roomCheck_(code);
   return { className: settings_().className, students: getStudentsPublic() };
 }
-function roomJoin(code, sid) {
+function roomJoin(code, sid, pw) {
   const c = roomCheck_(code);
-  if (!studentExists_(sid)) throw new Error('학생 정보를 찾지 못했어요.');
+  if (!studentPwOk_(sid, pw)) throw new Error('비밀번호가 맞지 않아요.');
   const k = 'R_' + c + '_m_' + sid;
   let m = null; try { m = JSON.parse(cache_().get(k) || 'null'); } catch (e) {}
   cache_().put(k, JSON.stringify(m || { task: '', setsDone: 0, finished: false, at: Date.now() }), ROOM_TTL_SEC);

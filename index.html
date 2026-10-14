@@ -157,11 +157,12 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.5.0', NEED_SHELL = 1, REP_M = 0.4;
-const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크' };
-const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank'];
+const VER = '0.6.0', NEED_SHELL = 1, REP_M = 0.4;
+const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈' };
+const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise'];
+const isT = function(x){ return x === 'plank' || x === 'balance'; };   // 시간으로 세는 종목
 const secLabel = function(v){ return v >= 60 ? (v / 60 | 0) + '분' + (v % 60 ? ' ' + v % 60 + '초' : '') : v + '초'; };
-const taskText = function(t){ return EXN[t.ex] + ' ' + (t.ex === 'plank' ? secLabel(t.reps) : t.reps + '회') + ' × ' + t.sets + '세트'; };
+const taskText = function(t){ return EXN[t.ex] + ' ' + (isT(t.ex) ? secLabel(t.reps) : t.reps + '회') + ' × ' + t.sets + '세트'; };
 function exSeg(cur, idp){ return '<div class="seg seg4">' + EXK.map(function(k){ return '<button data-' + idp + '="' + k + '" class="' + (k === cur ? 'on' : '') + '">' + EXN[k] + '</button>'; }).join('') + '</div>'; }
 const Q = {}; new URLSearchParams(location.search).forEach(function(v, k){ Q[k] = v; });
 const APP = { shell: '' };
@@ -236,7 +237,7 @@ function renderMain(d){
           '<div class="n">' + (next ? next[1].replace(/^[\d,]+m /, '') + ' ' + fmt(next[0]) + 'm까지 <em>' + meters(next[0] / REP_M - d.classTotal) + 'm</em>' : '<em>마리아나 해구 바닥에 닿았어요!</em>') + (d.classToday ? ' · 오늘 +' + meters(d.classToday) + 'm' : '') + '</div>' +
           '<div class="s">모두 ' + fmt(d.classTotal) + '번, 한 번에 40cm씩 함께 내려왔어요</div></div>' +
       '</div>' +
-      '<section class="card go"><div class="head"><h2>오늘 운동하기</h2><span class="plan">' + (MAIN.ex === 'plank' ? secLabel(st.plankSec || 30) : st.reps + '회') + ' × ' + st.sets + '세트 · 쉬기 ' + st.rest + '초</span></div>' +
+      '<section class="card go"><div class="head"><h2>오늘 운동하기</h2><span class="plan">' + (isT(MAIN.ex) ? secLabel(st.plankSec || 30) : st.reps + '회') + ' × ' + st.sets + '세트 · 쉬기 ' + st.rest + '초</span></div>' +
         exSeg(MAIN.ex, 'mex') +
         (students.length ? '<p class="hint">내 이름을 누르고 카메라로 시작해요</p><div class="names" id="names">' + students.map(function(s){ return '<button data-sid="' + esc(s.id) + '" class="' + (s.id === MAIN.sid ? 'on' : '') + '">' + esc(s.name) + '</button>'; }).join('') + '</div>' : '<p class="hint">아직 등록된 학생이 없어요. 관리자 메뉴에서 학생을 등록해 주세요.</p>') +
         '<button class="btn primary" id="goCam" ' + (sel ? '' : 'disabled') + '>' + (sel ? esc(sel.name) + ', 카메라로 시작하기' : '이름을 먼저 골라요') + '</button></section>' +
@@ -259,7 +260,7 @@ function renderMain(d){
 
   document.querySelectorAll('[data-mex]').forEach(function(b){ b.onclick = function(){ MAIN.ex = b.getAttribute('data-mex'); renderMain(MAIN.data); }; });
   document.querySelectorAll('#names button').forEach(function(b){ b.onclick = function(){ MAIN.sid = b.getAttribute('data-sid'); renderMain(MAIN.data); }; });
-  if ($('goCam')) $('goCam').onclick = function(){ if (sel) location.href = checkerUrl(sel, { ex: MAIN.ex, reps: MAIN.ex === 'plank' ? (st.plankSec || 30) : st.reps, sets: st.sets, rest: st.rest }, '', link('main')); };
+  if ($('goCam')) $('goCam').onclick = function(){ if (sel) location.href = checkerUrl(sel, { ex: MAIN.ex, reps: isT(MAIN.ex) ? (st.plankSec || 30) : st.reps, sets: st.sets, rest: st.rest }, '', link('main')); };
 }
 function checkerUrl(student, task, room, back){
   const u = new URL(ROOT + 'checker/');
@@ -306,7 +307,7 @@ function renderAdmin(s, students, records){
       '<div class="row3"><label class="f">기본 횟수<select id="sReps">' + opt([5, 8, 10, 12, 15, 20, 25, 30], s.reps, '회') + '</select></label>' +
       '<label class="f">기본 세트<select id="sSets">' + opt([1, 2, 3, 4, 5], s.sets, '세트') + '</select></label>' +
       '<label class="f">쉬는 시간<select id="sRest">' + opt([10, 15, 20, 30, 45, 60], s.rest, '초') + '</select></label></div>' +
-      '<label class="f">플랭크 목표 시간 (한 세트)<select id="sPlank">' + [10, 15, 20, 30, 45, 60, 90, 120, 180].map(function(x){ return '<option value="' + x + '"' + (Number(s.plankSec) === x ? ' selected' : '') + '>' + secLabel(x) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="f">버티기 목표 시간 (플랭크·외발 서기 한 세트)<select id="sPlank">' + [10, 15, 20, 30, 45, 60, 90, 120, 180].map(function(x){ return '<option value="' + x + '"' + (Number(s.plankSec) === x ? ' selected' : '') + '>' + secLabel(x) + '</option>'; }).join('') + '</select></label>' +
       '<label class="f">하루 안내 기준 (같은 종목 이만큼 넘으면 "무리하지 마세요")<select id="sLimit">' + opt([50, 80, 100, 150, 200], s.dayLimit, '개') + '</select></label>' +
       '<label class="f">오늘의 한마디 (비우면 자동으로 바뀌어요)<input id="sMsg" value="' + esc(s.message) + '" maxlength="120"></label>' +
       '<button class="btn primary" id="sSave">저장</button><span class="ok" id="sOk"></span></section>' +
@@ -356,7 +357,7 @@ function renderRoomShell(){
   try { new QRCode($('roomQr'), { text: joinUrl, width: 184, height: 184, colorDark: '#0E3A63', colorLight: '#ffffff' }); } catch (e) { $('roomQr').textContent = 'QR을 만들지 못했어요'; }
   let tex = 'squat';
   document.querySelectorAll('[data-tex]').forEach(function(b){ b.onclick = function(){ const was = tex; tex = b.getAttribute('data-tex'); document.querySelectorAll('[data-tex]').forEach(function(x){ x.classList.toggle('on', x === b); });
-    if ((was === 'plank') !== (tex === 'plank')) { $('tRepsLab').textContent = tex === 'plank' ? '시간' : '횟수'; $('tReps').innerHTML = tex === 'plank' ? [10, 15, 20, 30, 45, 60, 90, 120, 180].map(function(x){ return '<option value="' + x + '"' + (x === (s.plankSec || 30) ? ' selected' : '') + '>' + secLabel(x) + '</option>'; }).join('') : opt([5, 8, 10, 12, 15, 20, 25, 30], s.reps, '회'); } }; });
+    if (isT(was) !== isT(tex)) { $('tRepsLab').textContent = isT(tex) ? '시간' : '횟수'; $('tReps').innerHTML = isT(tex) ? [10, 15, 20, 30, 45, 60, 90, 120, 180].map(function(x){ return '<option value="' + x + '"' + (x === (s.plankSec || 30) ? ' selected' : '') + '>' + secLabel(x) + '</option>'; }).join('') : opt([5, 8, 10, 12, 15, 20, 25, 30], s.reps, '회'); } }; });
   $('sendTask').onclick = function(){
     if (ROOM.task && !confirm('새 과제를 보내면 지금 과제의 진행 표시가 처음부터 다시 시작돼요. 보낼까요?')) return;
     $('sendTask').disabled = true;
@@ -419,7 +420,7 @@ function showJoin(r){
   let body;
   if (!t) body = '<div class="wait"><i></i>선생님이 과제를 보내면 시작해요</div>';
   else if (mine && me.finished) body = '<div class="bigtask">끝! 잘했어요</div><p class="hint" style="text-align:center">' + taskText(t) + '를 다 했어요. 다음 과제를 기다려요.</p><div class="wait"><i></i>다음 과제 기다리는 중</div>';
-  else body = '<p class="hint" style="text-align:center">선생님이 보낸 과제</p><div class="bigtask">' + EXN[t.ex] + '<br>' + (t.ex === 'plank' ? secLabel(t.reps) : t.reps + '회') + ' × ' + t.sets + '세트</div><p class="hint" style="text-align:center">쉬는 시간 ' + t.rest + '초' + (mine && me.setsDone ? ' · 지난번에 ' + me.setsDone + '세트까지 했어요' : '') + '</p><button class="btn sea" id="startTask" style="min-height:60px;font-size:20px">카메라로 시작하기</button>';
+  else body = '<p class="hint" style="text-align:center">선생님이 보낸 과제</p><div class="bigtask">' + EXN[t.ex] + '<br>' + (isT(t.ex) ? secLabel(t.reps) : t.reps + '회') + ' × ' + t.sets + '세트</div><p class="hint" style="text-align:center">쉬는 시간 ' + t.rest + '초' + (mine && me.setsDone ? ' · 지난번에 ' + me.setsDone + '세트까지 했어요' : '') + '</p><button class="btn sea" id="startTask" style="min-height:60px;font-size:20px">카메라로 시작하기</button>';
   $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:14px">' + brand('운동방 ' + JOIN.code) +
     '<div style="display:flex;justify-content:space-between;align-items:center"><h2>' + esc(JOIN.name) + '</h2><button class="pill" id="notMe">내가 아니에요</button></div>' + body + '</div>' +
     peersCard(r.peers || [], t) + '</div></div>';

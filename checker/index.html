@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.5.1</title>
+<title>위 Down 맨몸 판정기 v0.6.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -206,6 +206,10 @@
       <button data-ex="pushup">팔굽혀펴기</button>
       <button data-ex="situp">윗몸일으키기</button>
       <button data-ex="plank">플랭크</button>
+      <button data-ex="highknee">무릎 들기</button>
+      <button data-ex="balance">외발 서기</button>
+      <button data-ex="climber">마운틴 클라이머</button>
+      <button data-ex="legraise">레그 레이즈</button>
     </div>
     <button class="hbtn" id="btnLog">기록장</button>
     <button class="hbtn" id="btnFull">전체 화면</button>
@@ -337,6 +341,22 @@
         <svg viewBox="0 0 64 64"><circle cx="10" cy="32" r="5"/><path d="M15 35 L56 40 M18 36 L16 46 L26 46 M56 40 L58 46"/></svg>
         플랭크<span>곧게 버티기 (초)</span>
       </button>
+      <button data-ex="highknee">
+        <svg viewBox="0 0 64 64"><circle cx="32" cy="10" r="5"/><path d="M32 16 V34 M32 22 L22 30 M32 22 L42 18 M32 34 L44 34 L44 46 M32 34 L30 56"/></svg>
+        무릎 높이 들기<span>제자리 달리기</span>
+      </button>
+      <button data-ex="balance">
+        <svg viewBox="0 0 64 64"><circle cx="32" cy="10" r="5"/><path d="M32 16 V36 M32 22 L18 26 M32 22 L46 26 M32 36 L32 56 M32 36 L42 44 L36 48"/></svg>
+        외발 서기<span>한 발로 버티기 (초)</span>
+      </button>
+      <button data-ex="climber">
+        <svg viewBox="0 0 64 64"><circle cx="12" cy="24" r="5"/><path d="M16 28 L44 40 L58 50 M18 30 L18 50 M44 40 L30 44 L36 52"/></svg>
+        마운틴 클라이머<span>무릎 번갈아 당기기</span>
+      </button>
+      <button data-ex="legraise">
+        <svg viewBox="0 0 64 64"><circle cx="10" cy="46" r="5"/><path d="M15 48 L38 50 L52 18 M20 50 L30 52"/></svg>
+        레그 레이즈<span>누워서 다리 들기</span>
+      </button>
     </div>
     <ol class="steps" id="steps"></ol>
     <div class="err" id="coverErr"></div>
@@ -360,7 +380,11 @@ const LEVELS={
   burpeeJump:{easy:0, normal:0.06, hard:0.1},    // 버피 마지막 만세 점프에서 두 발이 떠야 하는 높이 — 쉽게는 점프 안 봄
   pushup:{easy:0.35, normal:0.5, hard:0.7},      // 팔굽혀펴기 내려간 깊이(팔꿈치 각도·어깨가 손 쪽으로 내려간 정도)
   situp:{easy:50, normal:62, hard:75},           // 윗몸일으키기: 몸통이 바닥에서 이 각도(도)까지 일어나야 1회
-  plank:{easy:0.12, normal:0.08, hard:0.05}      // 플랭크: 엉덩이가 어깨~발목 선에서 벗어나도 되는 정도(몸 길이 비율)
+  plank:{easy:0.12, normal:0.08, hard:0.05},     // 플랭크: 엉덩이가 어깨~발목 선에서 벗어나도 되는 정도(몸 길이 비율)
+  highknee:{easy:-0.45, normal:-0.3, hard:-0.15}, // 무릎 높이 들기: (엉덩이 높이 - 무릎 높이) ÷ 허벅지 길이 가 이보다 커야 1회 (0 = 엉덩이 높이)
+  balance:{easy:0.07, normal:0.1, hard:0.15},    // 외발 서기: 두 발목 높이 차이 ÷ 다리 길이 가 이보다 커야 '한 발 든 것'
+  climber:{easy:125, normal:110, hard:95},       // 마운틴 클라이머: 어깨-엉덩이-무릎 각도가 이보다 작아져야(무릎을 가슴 쪽으로) 1회
+  legraise:{easy:45, normal:60, hard:75}         // 레그 레이즈: 다리가 바닥에서 이 각도(도)까지 올라가야 1회
 };
 function Counter(){ this.resetBase(); }
 Counter.prototype.resetBase=function(){ this.count=0; this.best=0; this.streak=0; this.lastRep=-99; this.times=[]; this.partial=0; this.fast=0; this.why=''; this.whyT=-99; this.visible=false; this.full=false; this.meter=0; this.phase=''; this.lastT=0; };
@@ -646,10 +670,123 @@ PlankJudge.prototype.push=function(t,lm){
   return this.state();
 };
 PlankJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this); s.good=this.good; s.pose=this.pose; s.held=this.held; return s; };
+/* 무릎 높이 들기(제자리 달리기): 무릎이 엉덩이 높이 가까이 올라오면 1회 — 왼쪽·오른쪽 각각, 내려갔다 다시 올라와야 다음 회 */
+function HighKneeJudge(level){ Counter.call(this); this.setLevel(level||'normal'); this.reset(); }
+HighKneeJudge.prototype=Object.create(Counter.prototype);
+HighKneeJudge.prototype.setLevel=function(l){ this.th=LEVELS.highknee[l]??-0.3; };
+HighKneeJudge.prototype.line=function(){ return (this.th+1)*1.2/1.2; };
+HighKneeJudge.prototype.reset=function(){ this.resetBase(); this.thigh=null; this.up={L:false,R:false}; this.ready=false; this.n=0; this.left=0; this.right=0; };
+HighKneeJudge.prototype.push=function(t,lm){
+  this.lastT=t; this.visible=seen(lm,11)||seen(lm,12)||seen(lm,0);
+  this.full=[23,24,25,26].every(i=>seen(lm,i,0.5));
+  if(!this.full) return this.state();
+  const lifts={};
+  [['L',23,25],['R',24,26]].forEach(([k,h,kn])=>{ const d=lm[kn].y-lm[h].y; if(this.thigh===null||d>this.thigh) this.thigh=this.thigh===null?d:this.thigh+(d-this.thigh)*0.3; lifts[k]=-(d/Math.max(0.03,this.thigh)); });
+  if(this.thigh!==null) this.thigh+=0;            // 허벅지 길이는 서 있을 때(무릎이 가장 낮을 때) 기준
+  this.n++; this.ready=this.n>10;
+  const best=Math.max(lifts.L,lifts.R);
+  this.meter=Math.max(0,Math.min(1.2,best+1));     // -1(서 있음) → 0, 0(엉덩이 높이) → 1
+  if(!this.ready) return this.state();
+  ['L','R'].forEach(k=>{
+    if(!this.up[k]&&lifts[k]>this.th){ this.up[k]=true; if(t-this.lastRep>=0.15){ this.rep(t); if(k==='L') this.left++; else this.right++; } }
+    else if(this.up[k]&&lifts[k]<this.th-0.35) this.up[k]=false;
+  });
+  this.phase=(this.up.L||this.up.R)?'down':'up';
+  return this.state();
+};
+HighKneeJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this); s.left=this.left; s.right=this.right; return s; };
+
+/* 외발 서기: 몸을 세우고 한 발을 들고 있는 동안 초가 올라감 — 왼발·오른발 시간을 따로 셈 */
+function BalanceJudge(level){ Counter.call(this); this.setLevel(level||'normal'); this.reset(); }
+BalanceJudge.prototype=Object.create(Counter.prototype);
+BalanceJudge.prototype.setLevel=function(l){ this.th=LEVELS.balance[l]||0.1; };
+BalanceJudge.prototype.line=function(){ return 0.6; };
+BalanceJudge.prototype.reset=function(){ this.resetBase(); this.held=0; this.heldL=0; this.heldR=0; this.prevT=null; this.goodSince=null; this.good=false; this.pose=''; this.leg=null; this.ready=true; };
+BalanceJudge.prototype.push=function(t,lm){
+  const dt=this.prevT===null?0:Math.max(0,Math.min(0.25,t-this.prevT)); this.prevT=t; this.lastT=t;
+  this.visible=seen(lm,11)||seen(lm,12)||seen(lm,0);
+  const inF=i=>seen(lm,i,0.5)&&lm[i].y<0.985;
+  this.full=[23,24,27,28].every(inF)&&(seen(lm,11)||seen(lm,12));
+  let good=false, pose='both', side='';
+  if(this.full){
+    const hip=(lm[23].y+lm[24].y)/2, foot=Math.max(lm[27].y,lm[28].y);
+    if(this.leg===null||foot-hip>this.leg) this.leg=this.leg===null?foot-hip:this.leg+((foot-hip)-this.leg)*0.3;
+    const L=Math.max(0.05,this.leg), diff=(lm[28].y-lm[27].y)/L;   // +: 왼발(27)이 더 높음
+    const sh=[11,12].filter(i=>seen(lm,i)).map(i=>lm[i].y), upright=sh.length&&Math.min(...sh)<hip-0.1*L;
+    this.meter=Math.max(0,Math.min(1.2,Math.abs(diff)/this.th*0.6));
+    if(!upright) pose='bend'; else if(Math.abs(diff)>this.th){ pose='ok'; good=true; side=diff>0?'L':'R'; }
+  } else this.meter=0;
+  this.pose=pose;
+  if(good){ if(this.goodSince===null) this.goodSince=t; if(t-this.goodSince>=0.5){ this.held+=dt; if(side==='L') this.heldL+=dt; else this.heldR+=dt; } } else this.goodSince=null;
+  this.good=good&&this.goodSince!==null&&t-this.goodSince>=0.5;
+  this.count=Math.floor(this.held);
+  return this.state();
+};
+BalanceJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this); s.good=this.good; s.pose=this.pose; s.left=Math.floor(this.heldL); s.right=Math.floor(this.heldR); return s; };
+
+/* 마운틴 클라이머: 팔을 세운 엎드린 자세(옆모습)에서 무릎을 가슴 쪽으로 당겼다(어깨-엉덩이-무릎 각도가 작아짐) 다시 펴면 1회 — 다리마다 */
+function ClimberJudge(level){ Counter.call(this); this.setLevel(level||'normal'); this.reset(); }
+ClimberJudge.prototype=Object.create(Counter.prototype);
+ClimberJudge.prototype.setLevel=function(l){ this.th=LEVELS.climber[l]||110; };
+ClimberJudge.prototype.line=function(){ return (175-this.th)/80*1.2/1.2; };
+ClimberJudge.prototype.reset=function(){ this.resetBase(); this.inL=false; this.inR=false; this.horiz=false; this.ready=true; };
+ClimberJudge.prototype.push=function(t,lm){
+  this.lastT=t; const J=sideOf(lm);
+  this.visible=seen(lm,J.S)||seen(lm,0);
+  this.full=[J.S,J.H].every(i=>seen(lm,i))&&(seen(lm,25)||seen(lm,26));
+  if(!this.full) return this.state();
+  const S=lm[J.S],H=lm[J.H];
+  const sup=[J.E,J.W].filter(i=>seen(lm,i)).map(i=>lm[i]);
+  this.horiz=Math.abs(H.y-S.y)<0.9*Math.abs(H.x-S.x)&&sup.length>0&&Math.max(...sup.map(p=>p.y))>S.y;   // 엎드려 팔로 짚은 자세
+  if(!this.horiz){ this.meter=0; return this.state(); }
+  let best=0;
+  [['L',25],['R',26]].forEach(([k,kn])=>{
+    if(!seen(lm,kn,0.3)) return;
+    const a=angleAt(S,H,lm[kn]); best=Math.max(best,(175-a)/80);
+    const key='in'+k;
+    if(!this[key]&&a<this.th){ this[key]=true; if(t-this.lastRep>=0.15) this.rep(t); }
+    else if(this[key]&&a>this.th+30) this[key]=false;
+  });
+  this.meter=Math.max(0,Math.min(1.2,best));
+  this.phase=(this.inL||this.inR)?'down':'up';
+  return this.state();
+};
+ClimberJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this); s.horiz=this.horiz; return s; };
+
+/* 레그 레이즈: 누운 자세(몸통이 바닥과 나란함)에서 다리를 편 채 기준 각도까지 들어 올리면 1회 — 다시 내려야 다음 회 */
+function LegRaiseJudge(level){ Counter.call(this); this.setLevel(level||'normal'); this.reset(); }
+LegRaiseJudge.prototype=Object.create(Counter.prototype);
+LegRaiseJudge.prototype.setLevel=function(l){ this.th=LEVELS.legraise[l]||60; };
+LegRaiseJudge.prototype.line=function(){ return this.th/90*1.2; };
+LegRaiseJudge.prototype.reset=function(){ this.resetBase(); this.phase='wait'; this.as=null; this.maxA=0; this.downT=0; this.bentWarned=false; this.ready=true; };
+LegRaiseJudge.prototype.push=function(t,lm){
+  this.lastT=t; const J=sideOf(lm);
+  this.visible=seen(lm,J.S)||seen(lm,0);
+  const A=seen(lm,J.A)?J.A:null;
+  this.full=[J.S,J.H,J.K].every(i=>seen(lm,i))&&A!==null;
+  if(!this.full) return this.state();
+  const S=lm[J.S],H=lm[J.H],K=lm[J.K],F=lm[A];
+  const lying=Math.abs(H.y-S.y)<0.6*Math.abs(H.x-S.x);              // 몸통이 바닥과 나란함
+  if(!lying){ this.meter=0; this.pose='sit'; return this.state(); }
+  this.pose='';
+  const a=Math.atan2(Math.max(0,H.y-F.y),Math.abs(F.x-H.x)+1e-6)*180/Math.PI;   // 발목이 엉덩이보다 올라간 각도 (0 = 바닥, 90 = 똑바로 위)
+  const straight=angleAt(H,K,F)>140;
+  this.as=this.as===null?a:this.as+(a-this.as)*0.5;
+  this.meter=Math.max(0,Math.min(1.2,this.as/90*1.2));
+  const g=this.as;
+  if(this.phase==='wait'||this.phase==='up'){ if(g<20){ this.phase='low'; this.downT=t; this.maxA=0; this.bentWarned=false; } }
+  else if(this.phase==='low'){
+    if(g>this.maxA) this.maxA=g;
+    if(g>=this.th){ if(!straight){ if(!this.bentWarned){ this.hint(t,'straight'); this.bentWarned=true; } } else { this.phase='up'; if(t-this.downT>=0.4) this.rep(t); else this.hint(t,'fast'); } }
+    else if(g<15&&this.maxA>30){ this.hint(t,'higher'); this.maxA=0; }
+  }
+  return this.state();
+};
+LegRaiseJudge.prototype.state=function(){ const s=Counter.prototype.state.call(this); s.pose=this.pose; return s; };
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.5.1', REP_M=0.4;
+const VER='0.6.0', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
@@ -663,13 +800,22 @@ const EX={
     steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 누워 <b>무릎을 세워요</b>. 머리부터 무릎까지 화면에 들어오게 해요.','등이 바닥에 닿게 누웠다가 <b>상체를 일으켜</b> 선을 넘으면 1회예요.','다시 누워야 다음 회를 세요. 덜 일어나면 <em>"조금 더 일어나요"</em>가 떠요.']},
   plank:{name:'플랭크', obj:'플랭크를', lab:'버틴 시간', meterL:'몸이 곧은 정도', meterR:'선을 넘는 동안 초가 올라가요', partK:'자세 고침', sub:'몸을 곧게 버티는 동안만 초가 올라가요',
     steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 엎드려요. 머리부터 발까지 화면에 들어오게 해요.','팔을 바닥에 <b>수직으로 세워</b>(또는 팔꿈치로) 짚고, <b>머리부터 발끝까지 비스듬한 한 줄</b>로 곧게 버텨요. 자세가 맞으면 초가 올라가요.','엉덩이가 처지거나 솟거나, 바닥에 엎드리면 초가 멈추고 알려 줘요. 바로잡으면 이어서 올라가요.']},
+  highknee:{name:'무릎 높이 들기', obj:'무릎 높이 들기를', lab:'지금까지 든 무릎', meterL:'무릎 높이', meterR:'선을 넘으면 1회 (왼쪽·오른쪽 각각)', partK:'덜 든', sub:'제자리에서 달리듯 무릎을 엉덩이 높이까지 번갈아 들면 1회씩',
+    steps:['기기에서 <b>2~3m</b> 떨어져 <b>엉덩이와 무릎</b>이 잘 보이게 서요. 앞이나 옆, 어느 쪽을 봐도 돼요.','제자리에서 달리듯 <b>무릎을 엉덩이 높이까지</b> 번갈아 들어요. 한 번 들 때마다 1회예요.','팔도 같이 흔들면 더 좋아요. 무릎이 덜 올라오면 세지 않아요.']},
+  balance:{name:'외발 서기', obj:'외발 서기를', lab:'버틴 시간', meterL:'발을 든 높이', meterR:'선을 넘는 동안 초가 올라가요', partK:'자세 고침', sub:'한 발을 들고 버티는 동안 초가 올라가요 (왼발·오른발 따로 셈)',
+    steps:['기기에서 <b>2~3m</b> 떨어져 <b>머리부터 발까지</b> 보이게 서요.','몸을 곧게 세우고 <b>한 발을 들어</b> 버텨요. 발을 든 동안 초가 올라가요.','발이 바닥에 닿으면 멈췄다가, 다시 들면 이어서 올라가요. 왼발·오른발을 바꿔 가며 해요.']},
+  climber:{name:'마운틴 클라이머', obj:'마운틴 클라이머를', lab:'지금까지 당긴 무릎', meterL:'무릎을 당긴 정도', meterR:'선을 넘고 다리를 펴면 1회 (다리마다)', partK:'덜 당긴', sub:'팔을 세운 엎드린 자세에서 무릎을 가슴 쪽으로 번갈아 당기면 1회씩',
+    steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 엎드려요. 머리부터 발까지 화면에 들어오게 해요.','팔을 바닥에 세워 짚고, <b>무릎을 가슴 쪽으로</b> 번갈아 당겼다 펴요. 한 번 당길 때마다 1회예요.','엉덩이가 너무 솟지 않게, 몸은 비스듬한 한 줄로 유지해요.']},
+  legraise:{name:'레그 레이즈', obj:'레그 레이즈를', lab:'지금까지 한 레그 레이즈', meterL:'다리를 든 각도', meterR:'선을 넘으면 1회, 내려야 다음 회', partK:'덜 든', sub:'누워서 다리를 편 채로 들어 올렸다 내리면 1회',
+    steps:['기기를 바닥 가까이 두고 <b>옆모습</b>이 보이게 바로 누워요. 머리부터 발까지 화면에 들어오게 해요.','<b>다리를 편 채로</b> 기준 각도까지 들어 올리면 1회예요. 다시 바닥 가까이 내려야 다음 회를 세요.','무릎을 굽히면 <em>"다리를 펴요"</em>, 덜 올리면 <em>"조금 더 올려요"</em>가 떠요. 허리가 아프면 쉬어요.']},
   burpee:{name:'버피', obj:'버피를', lab:'지금까지 한 버피', meterL:'엎드리기 → 일어나기 → 만세 점프', meterR:'세 단계를 다 하면 1회', partK:'덜 한', sub:'엎드려 버티기 → 일어나기 → 만세 점프까지 이어지면 1회',
     steps:['<b>옆으로</b> 서서 엎드렸을 때도 몸이 다 보이게 기기를 <b>3m쯤</b> 떨어뜨려 놓아요.','쪼그려 손 짚고 다리를 뒤로 뻗어 <b>엎드려 버티기</b> → 다리를 당겨 일어나며 <b>만세 점프</b>까지 하면 1회예요.','엎드리지 않거나 만세 점프 없이 일어나면 세지 않아요. 기준 <b>쉽게</b>는 점프를 보지 않아요.']},
   jack:{name:'점핑잭', obj:'점핑잭을', lab:'지금까지 한 점핑잭', meterL:'어깨 → 차렷 → 만세 → 차렷', meterR:'네 박자를 다 하면 1회', partK:'덜 한', sub:'어깨 높이 → 차렷 → 만세 → 차렷, 네 박자가 1회',
     steps:['<b>정면</b>을 보고 <b>머리부터 발까지</b> 다 보이게 서요. 옆 친구는 화면 밖으로.','<b>① 다리 벌리고 팔은 어깨 높이로 옆으로 쭉</b> → <b>② 차렷</b> → <b>③ 다리 벌리고 만세(팔 머리 위로 쭉)</b> → <b>④ 차렷</b>','박자마다 <b>두 발로 콩 뛰면서</b> 네 박자를 순서대로 다 하면 1회. 걸어서 발을 옮기면 <em>"콩콩 뛰면서 해요"</em>, 팔만 하면 <em>"다리도 벌려요"</em>, 순서가 바뀌면 다음 할 동작을 알려 줘요.']}
 };
 const Q=new URLSearchParams(location.search);
-const EXS=['squat','jack','lunge','burpee','pushup','situp','plank'];
+const EXS=['squat','jack','lunge','burpee','pushup','situp','plank','highknee','balance','climber','legraise'];
+const TIMED={plank:1,balance:1}; const isT=x=>!!TIMED[x||ex];   // 시간으로 세는 종목(초) — 바다 깊이는 2초 = 1회
 let ex=EXS.indexOf(Q.get('ex'))>0?Q.get('ex'):'squat', level='normal';
 /* 학교 연결 모드: 학교 메인·운동방에서 이름을 골라 열면 s(학교 시트)·sid(학생)·계획이 주소에 실려 옴 */
 const LINK={s:Q.get('s')||'', sid:Q.get('sid')||'', name:Q.get('name')||'', room:Q.get('room')||'', task:Q.get('task')||'', back:''};
@@ -683,10 +829,10 @@ function srpc(fn,args,retried){
 }
 function roomSignal(finished){ if(LINK.on&&LINK.room) srpc('roomProgress',[LINK.room,LINK.sid,LINK.task,S.done.length,!!finished]).catch(()=>{}); }
 let judge=null;
-const JUDGES={squat:SquatJudge,jack:JackJudge,lunge:LungeJudge,burpee:BurpeeJudge,pushup:PushupJudge,situp:SitupJudge,plank:PlankJudge};
+const JUDGES={squat:SquatJudge,jack:JackJudge,lunge:LungeJudge,burpee:BurpeeJudge,pushup:PushupJudge,situp:SitupJudge,plank:PlankJudge,highknee:HighKneeJudge,balance:BalanceJudge,climber:ClimberJudge,legraise:LegRaiseJudge};
 function makeJudge(){ judge=new (JUDGES[ex]||SquatJudge)(level); }
-const REPM=()=>ex==='plank'?REP_M/2:REP_M;   // 플랭크는 2초 = 1회(40cm)
-const UNIT=()=>ex==='plank'?'초':'회';
+const REPM=()=>isT()?REP_M/2:REP_M;   // 시간 종목은 2초 = 1회(40cm)
+const UNIT=()=>isT()?'초':'회';
 function applyEx(){
   const e=EX[ex];
   document.querySelectorAll('[data-ex]').forEach(b=>b.classList.toggle('on',b.getAttribute('data-ex')===ex));
@@ -743,7 +889,7 @@ function draw(lm,st){
   cx.clearRect(0,0,cv.width,cv.height);
   if(!lm) return;
   const P=i=>[lm[i].x*cv.width,lm[i].y*cv.height];
-  const hot=((ex==='squat'||ex==='lunge')&&st.phase==='down')||(ex==='jack'&&(st.step===1||st.step===3))||(ex==='burpee'&&st.step>0)||(ex==='pushup'&&st.phase==='down')||(ex==='situp'&&st.phase==='up')||(ex==='plank'&&st.good);
+  const hot=((ex==='squat'||ex==='lunge')&&st.phase==='down')||(ex==='jack'&&(st.step===1||st.step===3))||(ex==='burpee'&&st.step>0)||(ex==='pushup'&&st.phase==='down')||(ex==='situp'&&st.phase==='up')||(ex==='plank'&&st.good)||(ex==='balance'&&st.good)||((ex==='highknee'||ex==='climber')&&st.phase==='down')||(ex==='legraise'&&st.phase==='up');
   cx.lineWidth=Math.max(4,cv.width/130); cx.lineCap='round';
   cx.strokeStyle=hot?'#5FE0F0':'rgba(255,255,255,.9)';
   BONES.forEach(([a,b])=>{ if((lm[a].visibility??1)<0.4||(lm[b].visibility??1)<0.4) return; cx.beginPath(); cx.moveTo(...P(a)); cx.lineTo(...P(b)); cx.stroke(); });
@@ -770,10 +916,10 @@ function loop(){
 const S={mode:'idle', set:0, sets:3, reps:10, rest:10, done:[], offset:0, until:0, shown:-1, early:false};
 function setSel(id,v,unit){ const el=$(id); if(![...el.options].some(o=>+o.value===+v)){ const o=document.createElement('option'); o.value=v; o.textContent=id==='pRest'?v+'초':v; el.appendChild(o); } el.value=String(v); }
 const REP_OPTS=[5,8,10,12,15,20,25,30], SEC_OPTS=[10,15,20,30,45,60,90,120];
-function planOptions(){ const el=$('pReps'), opts=ex==='plank'?SEC_OPTS:REP_OPTS; el.innerHTML=opts.map(v=>'<option value="'+v+'">'+(ex==='plank'?(v>=60?(v/60)+'분'+(v%60?' '+(v%60)+'초':''):v+'초'):v)+'</option>').join(''); $('pRepsLab').textContent=ex==='plank'?'시간':'횟수'; }
+function planOptions(){ const el=$('pReps'), opts=isT()?SEC_OPTS:REP_OPTS; el.innerHTML=opts.map(v=>'<option value="'+v+'">'+(isT()?(v>=60?(v/60)+'분'+(v%60?' '+(v%60)+'초':''):v+'초'):v)+'</option>').join(''); $('pRepsLab').textContent=isT()?'시간':'횟수'; }
 function loadPlan(){ planOptions(); let p=null; try{ p=JSON.parse(localStorage.getItem('wedown.plan.'+ex)||'null'); }catch(e){}
   if(LINK.on) p={reps:+Q.get('reps')||10, sets:+Q.get('sets')||3, rest:+Q.get('rest')||10};
-  p=p||(ex==='plank'?{reps:30,sets:3,rest:15}:{reps:10,sets:3,rest:10}); setSel('pReps',p.reps); setSel('pSets',p.sets); setSel('pRest',p.rest); readPlan(); }
+  p=p||(isT()?{reps:30,sets:3,rest:15}:{reps:10,sets:3,rest:10}); setSel('pReps',p.reps); setSel('pSets',p.sets); setSel('pRest',p.rest); readPlan(); }
 function readPlan(){ S.reps=+$('pReps').value; S.sets=+$('pSets').value; S.rest=+$('pRest').value;
   if(!LINK.on) try{ localStorage.setItem('wedown.plan.'+ex,JSON.stringify({reps:S.reps,sets:S.sets,rest:S.rest})); }catch(e){} if(S.mode==='idle') showSet(); }
 ['pReps','pSets','pRest'].forEach(id=>$(id).onchange=readPlan);
@@ -784,7 +930,7 @@ function sessionTotal(){ return S.done.reduce((a,b)=>a+b,0)+setCount(); }
 /* 기록장 — 지금은 이 기기에 저장 (학교 기록 페이지가 생기면 그쪽으로도 보냄) */
 const today=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 function readLog(){ try{ return JSON.parse(localStorage.getItem('wedown.log')||'[]'); }catch(e){ return []; } }
-let dayLimit=100;   const dayLimitFor=()=>ex==='plank'?dayLimit*3:dayLimit;   // 하루에 같은 종목을 이만큼 넘게 하면 '무리하지 마세요' 안내 (학교 연결 때는 학교 설정을 따름)
+let dayLimit=100;   const dayLimitFor=()=>isT()?dayLimit*3:dayLimit;   // 하루에 같은 종목을 이만큼 넘게 하면 '무리하지 마세요' 안내 (학교 연결 때는 학교 설정을 따름)
 function todayTotal(x){ return readLog().filter(r=>r.d===today()&&r.ex===x).reduce((a,r)=>a+(r.total||0),0); }
 function saveLog(rec){ const l=readLog(); l.push(rec); try{ localStorage.setItem('wedown.log',JSON.stringify(l.slice(-300))); }catch(e){}
   if(Q.get('mode')==='post'&&window.opener){ try{ window.opener.postMessage({type:'wedown-result',...rec,ver:VER},'*'); }catch(e){} } }
@@ -798,7 +944,7 @@ async function startSession(){
   let done=todayTotal(ex);
   if(LINK.on){ $('btnStart').disabled=true; try{ const r=await srpc('getStudentToday',[LINK.sid,ex]); done=r.total; dayLimit=r.limit||100; }catch(e){} $('btnStart').disabled=false; }
   const plan=S.reps*S.sets;
-  if(done+plan>dayLimitFor()){ $('warnText').textContent=(LINK.name?LINK.name+', ':'')+'오늘 '+EX[ex].obj+' 벌써 '+done+(ex==='plank'?'초':'개')+' 했어요. 이번까지 하면 '+(done+plan)+(ex==='plank'?'초로 ':'개로 ')+dayLimitFor()+(ex==='plank'?'초를':'개를')+' 넘어요. 몸 상태에 맞춰 무리하지 마세요.'; $('warnModal').classList.add('on'); return; }
+  if(done+plan>dayLimitFor()){ $('warnText').textContent=(LINK.name?LINK.name+', ':'')+'오늘 '+EX[ex].obj+' 벌써 '+done+(isT()?'초':'개')+' 했어요. 이번까지 하면 '+(done+plan)+(isT()?'초로 ':'개로 ')+dayLimitFor()+(isT()?'초를':'개를')+' 넘어요. 몸 상태에 맞춰 무리하지 마세요.'; $('warnModal').classList.add('on'); return; }
   begin();
 }
 function showStage(){ try{ const el=document.querySelector('.stage'), y=el.getBoundingClientRect().top+window.scrollY-8; if(Math.abs(window.scrollY-y)>20) window.scrollTo({top:y,behavior:'smooth'}); }catch(e){} }
@@ -809,11 +955,11 @@ function begin(){
 }
 function countdown(){
   S.mode='count'; S.until=performance.now()+5000; S.shown=-1;
-  overlay(S.set+'세트 준비',5,S.reps+UNIT()+(ex==='plank'?' 버티기 · 자세를 잡아요':' · 자세를 잡아요')); say(S.set+'세트 준비');
+  overlay(S.set+'세트 준비',5,S.reps+UNIT()+(isT()?' 버티기 · 자세를 잡아요':' · 자세를 잡아요')); say(S.set+'세트 준비');
 }
 function startSet(){
   S.mode='set'; S.offset=judge.count; hideOverlay();
-  if(ex==='jack'||ex==='burpee'){ judge.step=0; judge.air=false; } else if(judge.phase==='down') judge.phase='up';
+  if(ex==='jack'||ex==='burpee'){ judge.step=0; judge.air=false; } else if(ex==='highknee'){ judge.up={L:false,R:false}; } else if(ex==='climber'){ judge.inL=judge.inR=false; } else if(judge.phase==='down') judge.phase='up';
   beep(988,0.25,0.25); say('시작'); lastCount=-1; showSet();
 }
 function endSet(){
@@ -839,7 +985,7 @@ function finish(early){
   $('endModal').classList.add('on'); say(S.early?'수고했어요':'끝! 수고했어요');
   $('status').textContent='끝 — 시작을 누르면 다시 해요'; $('status').className='status idle';
 }
-function showDayWarn(n,total){ const L=dayLimitFor(), u=ex==='plank'?'초':'개'; $('endWarn').hidden=!(total>0&&n>L); $('endWarn').textContent=(LINK.name?LINK.name+', ':'')+'오늘 '+EX[ex].obj+' 모두 '+n+u+' 했어요. '+L+u+'가 넘었으니 몸 상태에 맞춰 무리하지 마세요.'; }
+function showDayWarn(n,total){ const L=dayLimitFor(), u=isT()?'초':'개'; $('endWarn').hidden=!(total>0&&n>L); $('endWarn').textContent=(LINK.name?LINK.name+', ':'')+'오늘 '+EX[ex].obj+' 모두 '+n+u+' 했어요. '+L+u+'가 넘었으니 몸 상태에 맞춰 무리하지 마세요.'; }
 let pendingSave=null;
 function sendSchool(total){
   if(!total){ $('endSaved').textContent='한 번도 세지 않아서 기록하지 않았어요'; $('endRetry').hidden=true; showDayWarn(0,0); return; }
@@ -872,7 +1018,7 @@ $('cdSkip').onclick=()=>{ if(S.mode==='rest'){ S.set++; countdown(); } };
 let lastCount=0;
 function showSet(){
   const c=setCount(), cur=S.mode==='idle'?1:Math.min(S.set,S.sets);
-  $('count').innerHTML=c+'<small>/'+S.reps+(ex==='plank'?'초':'')+'</small>';
+  $('count').innerHTML=c+'<small>/'+S.reps+(isT()?'초':'')+'</small>';
   $('lab').textContent=EX[ex].name+' · '+cur+' / '+S.sets+'세트';
   $('depth').textContent='바다로 '+(sessionTotal()*REPM()).toFixed(1)+'m 내려왔어요';
   $('mainCard').style.setProperty('--sea-h',(c/S.reps*70).toFixed(1)+'%');
@@ -880,13 +1026,14 @@ function showSet(){
 function paint(st,t){
   if(S.mode==='set'){
     const c=setCount();
-    if(c!==lastCount){ if(lastCount>=0&&c>lastCount&&(ex!=='plank'||c%5===0)){ $('count').classList.remove('flash'); void $('count').offsetWidth; $('count').classList.add('flash'); beep(660,0.08,0.15); } lastCount=c; showSet(); }
+    if(c!==lastCount){ if(lastCount>=0&&c>lastCount&&(!isT()||c%5===0)){ $('count').classList.remove('flash'); void $('count').offsetWidth; $('count').classList.add('flash'); beep(660,0.08,0.15); } lastCount=c; showSet(); }
     if(c>=S.reps){ endSet(); return; }
   }
   const s=$('status'), recent=t-st.whyT<1.6, set=(txt,c)=>{ s.textContent=txt; s.className='status '+c; };
   if(S.mode==='count') set('곧 시작해요 — 자리를 잡아요','wait');
   else if(S.mode==='rest') set('쉬는 시간','idle');
   else if(ex==='plank'&&S.mode==='set'){ if(!st.full) set('옆모습이 다 보이게 엎드려요','wait'); else if(st.good) set('잘 버티고 있어요!','good'); else if(st.pose==='sag') set('엉덩이가 처졌어요 — 배에 힘!','hint'); else if(st.pose==='pike') set('엉덩이를 조금 내려요','hint'); else if(st.pose==='flat') set('팔을 세워 바닥을 짚고 몸을 들어 올려요','hint'); else if(st.pose==='head') set('고개도 몸과 한 줄로!','hint'); else if(st.pose==='ok') set('좋아요, 그대로!','good'); else set('옆으로 엎드려 팔꿈치로 버텨요','wait'); }
+  else if(ex==='balance'&&S.mode==='set'){ if(!st.full) set('머리부터 발까지 보이게 서요','wait'); else if(st.good) set('잘 버티고 있어요! (왼발 '+st.left+'초 · 오른발 '+st.right+'초)','good'); else if(st.pose==='ok') set('좋아요, 그대로!','good'); else if(st.pose==='bend') set('몸을 곧게 세워요','hint'); else set('한 발을 들어요!','idle'); }
   else if(!st.visible) set('카메라 앞에 서 주세요','wait');
   else if(!st.full) set(ex==='jack'?'머리부터 발까지 다 보이게 서요':'발까지 다 보이게 조금 뒤로 물러서요','wait');
   else if(!st.ready) set(st.moved?'자리가 바뀌었어요 — 똑바로 서서 잠깐만':'똑바로 서서 잠깐 기다려요','wait');
@@ -897,7 +1044,10 @@ function paint(st,t){
   else if(recent&&st.why==='orderT') set('먼저 팔은 어깨 높이로!','hint');
   else if(recent&&st.why==='orderU') set('이번엔 만세! 팔을 머리 위로 쭉','hint');
   else if(ex==='pushup'&&!st.horiz) set('옆모습이 보이게 엎드려 몸을 곧게!','wait');
-  else if(recent&&st.why==='higher') set('조금 더 일어나요!','hint');
+  else if(recent&&st.why==='higher') set(ex==='legraise'?'조금 더 올려요!':'조금 더 일어나요!','hint');
+  else if(recent&&st.why==='straight') set('다리를 펴요!','hint');
+  else if(ex==='climber'&&!st.horiz) set('옆모습이 보이게 엎드려 팔을 세워요','wait');
+  else if(ex==='legraise'&&st.pose==='sit') set('옆모습이 보이게 바로 누워요','wait');
   else if(recent&&st.why==='split') set('다리를 앞뒤로 벌리고 앉아요!','hint');
   else if(recent&&st.why==='jumpUp') set('일어나면서 만세 점프까지!','hint');
   else if(recent&&st.why==='fast') set('너무 빨라요 — 끝까지 천천히!','hint');
@@ -909,8 +1059,9 @@ function paint(st,t){
   else if(ex==='burpee'&&st.step===2) set('만세 점프!','good');
   else if(ex==='pushup'&&st.phase==='down') set('좋아요, 밀어 올려요!','good');
   else if(ex==='situp'&&st.phase==='up') set('좋아요, 다시 누워요!','good');
+  else if(ex==='legraise'&&st.phase==='up') set('좋아요, 천천히 내려요!','good');
   else if(ex==='situp'&&st.phase==='wait') set('옆모습이 보이게 누워 무릎을 세워요','wait');
-  else if(setCount()===0) set({squat:'앉았다 일어나요!',jack:'다리 벌리고 팔은 어깨 높이로!',lunge:'한 발 내딛고 뒷무릎을 내려요!',burpee:'쪼그려 손 짚고 다리를 뒤로 쭉!',pushup:'팔을 굽혀 가슴을 바닥 쪽으로!',situp:'상체를 일으켜요!',plank:'몸을 곧게 버텨요!'}[ex],'idle');
+  else if(setCount()===0) set({squat:'앉았다 일어나요!',jack:'다리 벌리고 팔은 어깨 높이로!',lunge:'한 발 내딛고 뒷무릎을 내려요!',burpee:'쪼그려 손 짚고 다리를 뒤로 쭉!',pushup:'팔을 굽혀 가슴을 바닥 쪽으로!',situp:'상체를 일으켜요!',plank:'몸을 곧게 버텨요!',highknee:'무릎을 엉덩이 높이까지!',balance:'한 발을 들어요!',climber:'무릎을 가슴 쪽으로 번갈아!',legraise:'다리를 편 채로 들어 올려요!'}[ex],'idle');
   else if(t-st.lastRep<2.5) set('잘하고 있어요!','good');
   else set('조금만 더 힘내요!','idle');
   const m=Math.max(0,Math.min(1,st.meter/1.2));
@@ -937,7 +1088,7 @@ function resetView(){
 /* 기록장 보기 */
 function showLog(){
   const l=readLog().slice(-30).reverse();
-  $('logList').innerHTML=l.length?l.map(r=>'<li><b>'+r.d.slice(5).replace('-','/')+' '+(r.t||'')+'</b> '+(EX[r.ex]?EX[r.ex].name:r.ex)+' <span>'+r.reps.join(' · ')+'</span> <em>'+r.total+(r.ex==='plank'?'초':'회')+'</em></li>').join(''):'<li>아직 기록이 없어요</li>';
+  $('logList').innerHTML=l.length?l.map(r=>'<li><b>'+r.d.slice(5).replace('-','/')+' '+(r.t||'')+'</b> '+(EX[r.ex]?EX[r.ex].name:r.ex)+' <span>'+r.reps.join(' · ')+'</span> <em>'+r.total+(r.isT()?'초':'회')+'</em></li>').join(''):'<li>아직 기록이 없어요</li>';
   $('logModal').classList.add('on');
 }
 

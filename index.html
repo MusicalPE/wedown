@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0E3A63">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="우리 Down">
 <title>우리 Down · 맨몸 운동 기록</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap">
@@ -251,7 +257,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.8.6', NEED_SHELL = 4, REP_M = 0.4;
+const VER = '0.8.7', NEED_SHELL = 4, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
@@ -304,6 +310,29 @@ function showQR(url, title){
 function exSeg(cur, idp){ return '<div class="segg">' + GROUPS.map(function(g){ return '<div class="sgrp"><b>' + g[0] + '</b><div class="seg seg4">' + g[1].map(function(k){ return '<button data-' + idp + '="' + k + '" class="' + (k === cur ? 'on' : '') + '">' + EXN[k] + '</button>'; }).join('') + '</div></div>'; }).join('') + '</div>'; }
 const Q = {}; new URLSearchParams(location.search).forEach(function(v, k){ Q[k] = v; });
 const APP = { shell: '' };
+// 바탕화면 앱 아이콘 (점퍼스와 같은 방식)
+window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window._wdInstall = e; if (window._wdInstallUI) window._wdInstallUI(); });
+window.addEventListener('appinstalled', function(){ window._wdInstall = null; if (window._wdInstallUI) window._wdInstallUI('installed'); });
+try { if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js'); } catch (e) {}
+function installUI(){
+  const btn = $('installBtn'), msg = $('installMsg'), help = $('installHelp'); if (!btn) return;
+  const ua = navigator.userAgent || '';
+  const ios = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const ui = function(state){
+    if (!document.body.contains(btn)) return;
+    if (state === 'installed' || standalone) { btn.style.display = 'none'; help.textContent = ''; msg.textContent = state === 'installed' ? '앱 아이콘을 만들었어요! 바탕화면이나 시작 메뉴에서 "우리 Down"을 찾아 보세요.' : '지금 앱으로 열려 있어요. (아이콘이 이미 있어요)'; return; }
+    btn.style.display = '';
+    if (window._wdInstall) { btn.disabled = false; help.textContent = ''; return; }
+    btn.disabled = true;
+    help.innerHTML = ios ? '아이폰·아이패드: 사파리 아래쪽 <b>공유 단추(□↑)</b> → <b>홈 화면에 추가</b>를 누르세요.'
+      : '단추가 눌리지 않으면: 크롬·엣지 주소창 오른쪽의 <b>설치 아이콘(⊕ 또는 모니터 모양)</b>을 누르거나, 메뉴(⋮) → <b>앱</b>(또는 저장 및 공유) → <b>이 사이트를 앱으로 설치 / 바로가기 만들기</b>를 고르세요. 이미 설치했다면 바탕화면·시작 메뉴에 아이콘이 있어요.';
+  };
+  window._wdInstallUI = ui;
+  btn.onclick = function(){ const ev = window._wdInstall; if (!ev) return; ev.prompt();
+    (ev.userChoice || Promise.resolve({})).then(function(r){ window._wdInstall = null; if (r && r.outcome === 'accepted') ui('installed'); else { msg.textContent = '취소했어요. 필요할 때 다시 눌러 주세요.'; ui(); } }); };
+  ui();
+}
 (function(){ let s = Q.s || ''; try { if (s) localStorage.setItem('wd_shell', s); else s = localStorage.getItem('wd_shell') || ''; } catch (e) {} APP.shell = s; })();
 const ROOT = location.origin + location.pathname.replace(/index\.html$/, '');
 function link(page, extra){ const u = new URL(ROOT); if (APP.shell) u.searchParams.set('s', APP.shell); if (page && page !== 'main') u.searchParams.set('page', page); Object.keys(extra || {}).forEach(function(k){ if (extra[k] !== '' && extra[k] != null) u.searchParams.set(k, extra[k]); }); return u.toString(); }
@@ -491,6 +520,8 @@ function renderAdmin(s, students, records){
       '<div class="arow"><button class="btn" id="qrBig">크게 보여주기</button><button class="btn" id="qrCopy">주소 복사</button><button class="btn" id="qrSave">QR 이미지 저장</button></div>' +
       '<p class="hint">수업 때 바로 띄우려면 아래 주소를 교실 컴퓨터 <b>즐겨찾기</b>에 넣어 두세요. 열자마자 QR이 크게 떠요. 메인 화면 위의 <b>학생 QR</b> 단추로도 언제든 띄울 수 있어요.</p>' +
       '<div class="arow"><code class="url" style="flex:1">' + esc(link('main', { qr: 1 })) + '</code><button class="btn" id="qrAutoCopy">복사</button></div><span class="ok" id="qrOk"></span></div></div>') +
+    card('바탕화면에 앱 아이콘 만들기', '교실 컴퓨터·TV·태블릿에 아이콘을 만들어 두면 주소창 없이 앱처럼 바로 열려요. 이 기기가 기억한 우리 학교 시트로 열려요.',
+      '<div class="arow"><button class="btn primary" id="installBtn">앱 아이콘 만들기</button><span class="ok" id="installMsg"></span></div><p class="hint" id="installHelp"></p>') +
     card('우리 반 이름', '메인 화면 맨 위에 보여요. 예: <b><u>햇살초 6-1 위다운</u></b>', '<label class="f">반 이름<input id="sClass" value="' + esc(s.className) + '" maxlength="40"></label>' + save('saveClass')) +
     card('오늘의 한마디', '메인 화면 아래쪽 바다 속 카드에 보여요. 비워 두면 날마다 저절로 바뀌어요.', '<label class="f">한마디 (120자까지)<input id="sMsg" value="' + esc(s.message) + '" maxlength="120" placeholder="비우면 자동"></label>' + save('saveMsg'))) +
   pane('plan',
@@ -537,6 +568,7 @@ function renderAdmin(s, students, records){
   const prev = function(){ $('planPrev').innerHTML = '지금 계획: <b>' + $('sReps').value + '회 × ' + $('sSets').value + '세트</b> · 세트 사이 ' + $('sRest').value + '초 쉬기 → 한 번에 최대 ' + ($('sReps').value * $('sSets').value) + '회'; };
   ['sReps', 'sSets', 'sRest'].forEach(function(id){ $(id).onchange = prev; }); prev();
   const saver = function(id, get){ $(id).onclick = function(){ $(id).disabled = true; $(id + 'Ok').textContent = ''; rpc('setSettings', [token(), get()]).then(function(){ $(id + 'Ok').textContent = '저장했어요'; $(id).disabled = false; }).catch(function(e){ if (!authFail(e, 'admin')) { $(id + 'Ok').textContent = e.message; $(id).disabled = false; } }); }; };
+  installUI();
   saver('saveClass', function(){ return { className: $('sClass').value.trim() }; });
   saver('saveMsg', function(){ return { message: $('sMsg').value.trim() }; });
   saver('savePlan', function(){ return { reps: +$('sReps').value, sets: +$('sSets').value, rest: +$('sRest').value }; });

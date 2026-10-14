@@ -44,8 +44,8 @@
   .seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;background:var(--soft);border-radius:14px;padding:4px}
   .seg button{min-height:44px;border:0;border-radius:11px;background:transparent;color:var(--ink2);font-weight:700}
   .seg button.on{background:var(--navy);color:#fff}
-  .seg4{grid-template-columns:repeat(4,minmax(0,1fr))}
-  @media (max-width:420px){ .seg4{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .seg4{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+  .seg4 button{font-size:14px;padding:0 4px}
   .names{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px}
   .names button{min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font-weight:700;font-size:15px;padding:0 4px}
   .names button.on{background:var(--sea);border-color:var(--sea);color:#fff}
@@ -157,9 +157,11 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.4.0', NEED_SHELL = 1, REP_M = 0.4;
-const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피' };
-const EXK = ['squat', 'jack', 'lunge', 'burpee'];
+const VER = '0.5.0', NEED_SHELL = 1, REP_M = 0.4;
+const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크' };
+const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank'];
+const secLabel = function(v){ return v >= 60 ? (v / 60 | 0) + '분' + (v % 60 ? ' ' + v % 60 + '초' : '') : v + '초'; };
+const taskText = function(t){ return EXN[t.ex] + ' ' + (t.ex === 'plank' ? secLabel(t.reps) : t.reps + '회') + ' × ' + t.sets + '세트'; };
 function exSeg(cur, idp){ return '<div class="seg seg4">' + EXK.map(function(k){ return '<button data-' + idp + '="' + k + '" class="' + (k === cur ? 'on' : '') + '">' + EXN[k] + '</button>'; }).join('') + '</div>'; }
 const Q = {}; new URLSearchParams(location.search).forEach(function(v, k){ Q[k] = v; });
 const APP = { shell: '' };
@@ -234,7 +236,7 @@ function renderMain(d){
           '<div class="n">' + (next ? next[1].replace(/^[\d,]+m /, '') + ' ' + fmt(next[0]) + 'm까지 <em>' + meters(next[0] / REP_M - d.classTotal) + 'm</em>' : '<em>마리아나 해구 바닥에 닿았어요!</em>') + (d.classToday ? ' · 오늘 +' + meters(d.classToday) + 'm' : '') + '</div>' +
           '<div class="s">모두 ' + fmt(d.classTotal) + '번, 한 번에 40cm씩 함께 내려왔어요</div></div>' +
       '</div>' +
-      '<section class="card go"><div class="head"><h2>오늘 운동하기</h2><span class="plan">' + st.reps + '회 × ' + st.sets + '세트 · 쉬기 ' + st.rest + '초</span></div>' +
+      '<section class="card go"><div class="head"><h2>오늘 운동하기</h2><span class="plan">' + (MAIN.ex === 'plank' ? secLabel(st.plankSec || 30) : st.reps + '회') + ' × ' + st.sets + '세트 · 쉬기 ' + st.rest + '초</span></div>' +
         exSeg(MAIN.ex, 'mex') +
         (students.length ? '<p class="hint">내 이름을 누르고 카메라로 시작해요</p><div class="names" id="names">' + students.map(function(s){ return '<button data-sid="' + esc(s.id) + '" class="' + (s.id === MAIN.sid ? 'on' : '') + '">' + esc(s.name) + '</button>'; }).join('') + '</div>' : '<p class="hint">아직 등록된 학생이 없어요. 관리자 메뉴에서 학생을 등록해 주세요.</p>') +
         '<button class="btn primary" id="goCam" ' + (sel ? '' : 'disabled') + '>' + (sel ? esc(sel.name) + ', 카메라로 시작하기' : '이름을 먼저 골라요') + '</button></section>' +
@@ -252,12 +254,12 @@ function renderMain(d){
       '<div class="row"><span>꾸준히 1위</span>' + lead(d.leaders.streak, '일 연속') + '</div></section>' +
     '<section class="dark"><h2>오늘의 한마디</h2><p class="msg">' + esc(msg) + '</p>' +
       '<div class="stat"><span>등록 학생 <b>' + students.length + '</b>명</span><span>오늘 기록 <b>' + d.todayCount + '</b>건</span></div></section>' +
-    '<section class="dark"><h2>오늘 들어온 기록</h2>' + (d.todayList.length ? d.todayList.map(function(r){ return '<div class="rec"><span>' + esc(r.time) + '</span><b>' + esc(r.name) + '</b><span style="color:#C9E3EC;width:auto">' + esc(r.ex) + '</span><em>' + esc(String(r.reps).split(',').join('·')) + ' = ' + r.total + '회</em></div>'; }).join('') : '<p class="hint" style="color:var(--pale)">오늘 첫 기록을 기다려요</p>') + '</section>' +
+    '<section class="dark"><h2>오늘 들어온 기록</h2>' + (d.todayList.length ? d.todayList.map(function(r){ return '<div class="rec"><span>' + esc(r.time) + '</span><b>' + esc(r.name) + '</b><span style="color:#C9E3EC;width:auto">' + esc(r.ex) + '</span><em>' + esc(String(r.reps).split(',').join('·')) + ' = ' + r.total + (r.unit || '회') + '</em></div>'; }).join('') : '<p class="hint" style="color:var(--pale)">오늘 첫 기록을 기다려요</p>') + '</section>' +
   '</div><p class="madeby">Made by <b>음악적체육인</b> · 위 Down v' + VER + '</p></div></div>';
 
   document.querySelectorAll('[data-mex]').forEach(function(b){ b.onclick = function(){ MAIN.ex = b.getAttribute('data-mex'); renderMain(MAIN.data); }; });
   document.querySelectorAll('#names button').forEach(function(b){ b.onclick = function(){ MAIN.sid = b.getAttribute('data-sid'); renderMain(MAIN.data); }; });
-  if ($('goCam')) $('goCam').onclick = function(){ if (sel) location.href = checkerUrl(sel, { ex: MAIN.ex, reps: st.reps, sets: st.sets, rest: st.rest }, '', link('main')); };
+  if ($('goCam')) $('goCam').onclick = function(){ if (sel) location.href = checkerUrl(sel, { ex: MAIN.ex, reps: MAIN.ex === 'plank' ? (st.plankSec || 30) : st.reps, sets: st.sets, rest: st.rest }, '', link('main')); };
 }
 function checkerUrl(student, task, room, back){
   const u = new URL(ROOT + 'checker/');
@@ -304,6 +306,7 @@ function renderAdmin(s, students, records){
       '<div class="row3"><label class="f">기본 횟수<select id="sReps">' + opt([5, 8, 10, 12, 15, 20, 25, 30], s.reps, '회') + '</select></label>' +
       '<label class="f">기본 세트<select id="sSets">' + opt([1, 2, 3, 4, 5], s.sets, '세트') + '</select></label>' +
       '<label class="f">쉬는 시간<select id="sRest">' + opt([10, 15, 20, 30, 45, 60], s.rest, '초') + '</select></label></div>' +
+      '<label class="f">플랭크 목표 시간 (한 세트)<select id="sPlank">' + [10, 15, 20, 30, 45, 60, 90, 120, 180].map(function(x){ return '<option value="' + x + '"' + (Number(s.plankSec) === x ? ' selected' : '') + '>' + secLabel(x) + '</option>'; }).join('') + '</select></label>' +
       '<label class="f">하루 안내 기준 (같은 종목 이만큼 넘으면 "무리하지 마세요")<select id="sLimit">' + opt([50, 80, 100, 150, 200], s.dayLimit, '개') + '</select></label>' +
       '<label class="f">오늘의 한마디 (비우면 자동으로 바뀌어요)<input id="sMsg" value="' + esc(s.message) + '" maxlength="120"></label>' +
       '<button class="btn primary" id="sSave">저장</button><span class="ok" id="sOk"></span></section>' +
@@ -316,11 +319,11 @@ function renderAdmin(s, students, records){
       '<button class="btn primary" id="bulkAdd">등록하기</button><span class="ok" id="bulkOk"></span>' +
       '<div class="list" id="stuList">' + (students.length ? students.map(function(x){ return '<div class="it"><b style="width:28px;color:var(--muted)">' + esc(x.number) + '</b><b>' + esc(x.name) + '</b><span class="sp"></span><button data-ren="' + esc(x.id) + '" data-name="' + esc(x.name) + '" data-num="' + esc(x.number) + '">이름 고치기</button><button data-del="' + esc(x.id) + '" data-name="' + esc(x.name) + '">지우기</button></div>'; }).join('') : '<p class="hint">아직 등록된 학생이 없어요</p>') + '</div></section>' +
     '<section class="card" style="display:flex;flex-direction:column;gap:12px"><h2>최근 기록</h2><p class="hint">잘못 들어간 기록은 지울 수 있어요. 모든 기록은 학교 시트의 Records 탭에도 있어요.</p>' +
-      '<div class="list">' + (records.length ? records.map(function(r){ return '<div class="it"><span style="color:var(--muted);width:92px">' + esc(r.date.slice(5).replace('-', '/')) + ' ' + esc(r.time) + '</span><b>' + esc(r.name) + '</b><span>' + esc(r.exName) + '</span><span class="sp"></span><span>' + esc(r.reps.split(',').join('·')) + ' = <b>' + r.total + '</b>회</span><button data-rdel="' + esc(r.id) + '">지우기</button></div>'; }).join('') : '<p class="hint">아직 기록이 없어요</p>') + '</div></section>' +
+      '<div class="list">' + (records.length ? records.map(function(r){ return '<div class="it"><span style="color:var(--muted);width:92px">' + esc(r.date.slice(5).replace('-', '/')) + ' ' + esc(r.time) + '</span><b>' + esc(r.name) + '</b><span>' + esc(r.exName) + '</span><span class="sp"></span><span>' + esc(r.reps.split(',').join('·')) + ' = <b>' + r.total + '</b>' + (r.unit || '회') + '</span><button data-rdel="' + esc(r.id) + '">지우기</button></div>'; }).join('') : '<p class="hint">아직 기록이 없어요</p>') + '</div></section>' +
   '</div></div></div></div>';
   try { new QRCode($('mainQr'), { text: link('main'), width: 184, height: 184, colorDark: '#0E3A63', colorLight: '#ffffff' }); } catch (e) { $('mainQr').textContent = 'QR을 만들지 못했어요'; }
   $('logout').onclick = function(){ store('wd_token', null); location.href = link('main'); };
-  $('sSave').onclick = function(){ $('sSave').disabled = true; rpc('setSettings', [token(), { className: $('sClass').value.trim(), reps: +$('sReps').value, sets: +$('sSets').value, rest: +$('sRest').value, dayLimit: +$('sLimit').value, message: $('sMsg').value.trim() }]).then(function(){ $('sOk').textContent = '저장했어요'; $('sSave').disabled = false; }).catch(function(e){ if (!authFail(e, 'admin')) { $('sOk').textContent = e.message; $('sSave').disabled = false; } }); };
+  $('sSave').onclick = function(){ $('sSave').disabled = true; rpc('setSettings', [token(), { className: $('sClass').value.trim(), reps: +$('sReps').value, sets: +$('sSets').value, rest: +$('sRest').value, dayLimit: +$('sLimit').value, plankSec: +$('sPlank').value, message: $('sMsg').value.trim() }]).then(function(){ $('sOk').textContent = '저장했어요'; $('sSave').disabled = false; }).catch(function(e){ if (!authFail(e, 'admin')) { $('sOk').textContent = e.message; $('sSave').disabled = false; } }); };
   $('pwSave').onclick = function(){ rpc('changeAdminPassword', [token(), $('newPw').value]).then(function(){ store('wd_default_pw', null); $('pwOk').textContent = '바꿨어요. 다음부터 새 비밀번호로 들어와요.'; }).catch(function(e){ if (!authFail(e, 'admin')) $('pwOk').textContent = e.message; }); };
   $('bulkAdd').onclick = function(){ const t = $('bulk').value; if (!t.trim()) return; $('bulkAdd').disabled = true; rpc('addStudentsBulk', [token(), t]).then(function(r){ $('bulkOk').textContent = r.added + '명 등록했어요'; loadAdmin(); }).catch(function(e){ if (!authFail(e, 'admin')) { $('bulkOk').textContent = e.message; $('bulkAdd').disabled = false; } }); };
   document.querySelectorAll('[data-del]').forEach(function(b){ b.onclick = function(){ if (!confirm(b.getAttribute('data-name') + ' 학생을 지울까요? (기록은 시트에 남아요)')) return; rpc('deleteStudent', [token(), b.getAttribute('data-del')]).then(loadAdmin).catch(function(e){ if (!authFail(e, 'admin')) alert(e.message); }); }; });
@@ -345,18 +348,19 @@ function renderRoomShell(){
     '<section class="card" style="display:flex;flex-direction:column;gap:10px;text-align:center"><h2>휴대폰으로 찍고 들어와요</h2><div class="qr" id="roomQr"></div><div class="hint">방 번호</div><div class="code">' + ROOM.code.split('').join(' ') + '</div><p class="hint">메인 화면 주소 뒤에 들어오거나, 입장 화면에서 방 번호를 넣어도 돼요</p></section>' +
     '<section class="card" style="display:flex;flex-direction:column;gap:12px"><h2>과제 보내기</h2>' +
       exSeg('squat', 'tex') +
-      '<div class="row3"><label class="f">횟수<select id="tReps">' + opt([5, 8, 10, 12, 15, 20, 25, 30], s.reps, '회') + '</select></label><label class="f">세트<select id="tSets">' + opt([1, 2, 3, 4, 5], s.sets, '세트') + '</select></label><label class="f">쉬기<select id="tRest">' + opt([10, 15, 20, 30, 45, 60], s.rest, '초') + '</select></label></div>' +
+      '<div class="row3"><label class="f"><span id="tRepsLab">횟수</span><select id="tReps">' + opt([5, 8, 10, 12, 15, 20, 25, 30], s.reps, '회') + '</select></label><label class="f">세트<select id="tSets">' + opt([1, 2, 3, 4, 5], s.sets, '세트') + '</select></label><label class="f">쉬기<select id="tRest">' + opt([10, 15, 20, 30, 45, 60], s.rest, '초') + '</select></label></div>' +
       '<button class="btn sea" id="sendTask">모두에게 보내기</button><span class="ok" id="sendOk"></span>' +
       '<p class="hint">각자 기기에서 카메라로 하고, 세트를 마칠 때마다 여기에 알려 줘요. 방 자료는 시트에 쓰지 않고 임시로만 두었다가 몇 시간 뒤 저절로 사라져요. 다 마친 결과만 기록에 남아요.</p></section>' +
   '</div><div class="main"><section class="card" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px"><h2 id="taskTitle">아직 보낸 과제가 없어요</h2><span class="hint" id="taskSum"></span></div><div class="bar"><i id="taskBar" style="width:0%"></i></div><div class="tiles" id="tiles"></div><p class="hint">칸 하나 = 1세트 완료 · 숫자는 보내지 않고 세트를 마쳤다는 신호만 와요 · 3초마다 새로 고쳐요</p></section></div></div>' +
   '</div></div>';
   try { new QRCode($('roomQr'), { text: joinUrl, width: 184, height: 184, colorDark: '#0E3A63', colorLight: '#ffffff' }); } catch (e) { $('roomQr').textContent = 'QR을 만들지 못했어요'; }
   let tex = 'squat';
-  document.querySelectorAll('[data-tex]').forEach(function(b){ b.onclick = function(){ tex = b.getAttribute('data-tex'); document.querySelectorAll('[data-tex]').forEach(function(x){ x.classList.toggle('on', x === b); }); }; });
+  document.querySelectorAll('[data-tex]').forEach(function(b){ b.onclick = function(){ const was = tex; tex = b.getAttribute('data-tex'); document.querySelectorAll('[data-tex]').forEach(function(x){ x.classList.toggle('on', x === b); });
+    if ((was === 'plank') !== (tex === 'plank')) { $('tRepsLab').textContent = tex === 'plank' ? '시간' : '횟수'; $('tReps').innerHTML = tex === 'plank' ? [10, 15, 20, 30, 45, 60, 90, 120, 180].map(function(x){ return '<option value="' + x + '"' + (x === (s.plankSec || 30) ? ' selected' : '') + '>' + secLabel(x) + '</option>'; }).join('') : opt([5, 8, 10, 12, 15, 20, 25, 30], s.reps, '회'); } }; });
   $('sendTask').onclick = function(){
     if (ROOM.task && !confirm('새 과제를 보내면 지금 과제의 진행 표시가 처음부터 다시 시작돼요. 보낼까요?')) return;
     $('sendTask').disabled = true;
-    rpc('roomSendTask', [token(), { ex: tex, reps: +$('tReps').value, sets: +$('tSets').value, rest: +$('tRest').value }]).then(function(t){ $('sendOk').textContent = EXN[t.ex] + ' ' + t.reps + '회 × ' + t.sets + '세트를 보냈어요'; $('sendTask').disabled = false; pollRoom(); })
+    rpc('roomSendTask', [token(), { ex: tex, reps: +$('tReps').value, sets: +$('tSets').value, rest: +$('tRest').value }]).then(function(t){ $('sendOk').textContent = taskText(t) + '를 보냈어요'; $('sendTask').disabled = false; pollRoom(); })
       .catch(function(e){ if (!authFail(e, 'room')) { $('sendOk').textContent = e.message; $('sendTask').disabled = false; } });
   };
   $('closeRoom').onclick = function(){ if (!confirm('운동방을 닫을까요? 들어온 학생들의 진행 표시가 모두 사라져요. (끝낸 기록은 남아요)')) return; clearTimeout(ROOM.timer); rpc('roomClose', [token()]).then(function(){ location.href = link('main'); }).catch(function(e){ alert(e.message); }); };
@@ -371,7 +375,7 @@ function pollRoom(){
     const done = r.members.filter(function(m){ return m.finished; }).length;
     const doing = r.members.filter(function(m){ return m.joined && !m.finished && m.setsDone > 0; }).length;
     $('joinedCount').textContent = r.members.length + '명 중 ' + joined + '명 들어옴';
-    if (r.task) { $('taskTitle').textContent = '지금 과제 · ' + EXN[r.task.ex] + ' ' + r.task.reps + '회 × ' + r.task.sets + '세트'; $('taskSum').textContent = '끝 ' + done + '명 · 하는 중 ' + doing + '명 · 아직 ' + (joined - done - doing) + '명'; }
+    if (r.task) { $('taskTitle').textContent = '지금 과제 · ' + taskText(r.task); $('taskSum').textContent = '끝 ' + done + '명 · 하는 중 ' + doing + '명 · 아직 ' + (joined - done - doing) + '명'; }
     const totalSets = r.members.filter(function(m){ return m.joined; }).length * n;
     const doneSets = r.members.reduce(function(a, m){ return a + (m.finished ? n : m.setsDone); }, 0);
     $('taskBar').style.width = (totalSets ? doneSets / totalSets * 100 : 0).toFixed(1) + '%';
@@ -414,8 +418,8 @@ function showJoin(r){
   const mine = t && me.task === t.id;
   let body;
   if (!t) body = '<div class="wait"><i></i>선생님이 과제를 보내면 시작해요</div>';
-  else if (mine && me.finished) body = '<div class="bigtask">끝! 잘했어요</div><p class="hint" style="text-align:center">' + EXN[t.ex] + ' ' + t.reps + '회 × ' + t.sets + '세트를 다 했어요. 다음 과제를 기다려요.</p><div class="wait"><i></i>다음 과제 기다리는 중</div>';
-  else body = '<p class="hint" style="text-align:center">선생님이 보낸 과제</p><div class="bigtask">' + EXN[t.ex] + '<br>' + t.reps + '회 × ' + t.sets + '세트</div><p class="hint" style="text-align:center">쉬는 시간 ' + t.rest + '초' + (mine && me.setsDone ? ' · 지난번에 ' + me.setsDone + '세트까지 했어요' : '') + '</p><button class="btn sea" id="startTask" style="min-height:60px;font-size:20px">카메라로 시작하기</button>';
+  else if (mine && me.finished) body = '<div class="bigtask">끝! 잘했어요</div><p class="hint" style="text-align:center">' + taskText(t) + '를 다 했어요. 다음 과제를 기다려요.</p><div class="wait"><i></i>다음 과제 기다리는 중</div>';
+  else body = '<p class="hint" style="text-align:center">선생님이 보낸 과제</p><div class="bigtask">' + EXN[t.ex] + '<br>' + (t.ex === 'plank' ? secLabel(t.reps) : t.reps + '회') + ' × ' + t.sets + '세트</div><p class="hint" style="text-align:center">쉬는 시간 ' + t.rest + '초' + (mine && me.setsDone ? ' · 지난번에 ' + me.setsDone + '세트까지 했어요' : '') + '</p><button class="btn sea" id="startTask" style="min-height:60px;font-size:20px">카메라로 시작하기</button>';
   $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:14px">' + brand('운동방 ' + JOIN.code) +
     '<div style="display:flex;justify-content:space-between;align-items:center"><h2>' + esc(JOIN.name) + '</h2><button class="pill" id="notMe">내가 아니에요</button></div>' + body + '</div>' +
     peersCard(r.peers || [], t) + '</div></div>';

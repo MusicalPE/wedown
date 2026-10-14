@@ -22,7 +22,10 @@ const SHEET_STUDENTS = 'Students';
 const SHEET_RECORDS = 'Records';
 const STUDENTS_HEADER_ = ['ID', 'Number', 'Name', 'SortOrder'];
 const RECORDS_HEADER_ = ['RecordID', 'Timestamp', 'StudentID', 'Date', 'Time', 'Exercise', 'Target', 'Sets', 'Reps', 'Total', 'Source'];
-const EXERCISES_ = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피' };
+const EXERCISES_ = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크' };
+// 플랭크는 초로 기록하고, 바다 깊이는 2초 = 1회(40cm)로 셈
+function units_(ex, n) { return ex === 'plank' ? n / 2 : n; }
+function unitName_(ex) { return ex === 'plank' ? '초' : '회'; }
 const REP_M = 0.4;                       // 한 번에 바다로 40cm
 const TOKEN_TTL_SEC = 60 * 60;           // 관리자 토큰 1시간
 const ROOM_TTL_SEC = 6 * 60 * 60;        // 운동방 자료는 6시간 뒤 저절로 사라짐 (구글 캐시 최대값)
@@ -104,6 +107,7 @@ function settings_() {
     sets: Number(s.sets) || 3,
     rest: Number(s.rest) || 10,
     dayLimit: Number(s.dayLimit) || 100,
+    plankSec: Number(s.plankSec) || 30,
     message: s.message || ''
   };
 }
@@ -136,6 +140,7 @@ function setSettings(token, obj) {
     sets: Math.max(1, Math.min(10, Number(o.sets) || cur.sets)),
     rest: Math.max(5, Math.min(300, Number(o.rest) || cur.rest)),
     dayLimit: Math.max(10, Math.min(1000, Number(o.dayLimit) || cur.dayLimit)),
+    plankSec: Math.max(10, Math.min(300, Number(o.plankSec) || cur.plankSec)),
     message: String(o.message != null ? o.message : cur.message).slice(0, 120)
   };
   props_().setProperty('SETTINGS', JSON.stringify(n));
@@ -209,7 +214,8 @@ function studentExists_(sid) { return studentRows_().some(function (s) { return 
 function saveRecord(sid, ex, target, sets, reps) {
   if (!studentExists_(sid)) throw new Error('학생 정보를 찾지 못했어요.');
   if (!EXERCISES_[ex]) throw new Error('알 수 없는 운동이에요.');
-  const arr = (Array.isArray(reps) ? reps : []).map(function (n) { return Math.max(0, Math.min(100, Math.round(Number(n) || 0))); }).slice(0, 10);
+  const cap = ex === 'plank' ? 600 : 100;
+  const arr = (Array.isArray(reps) ? reps : []).map(function (n) { return Math.max(0, Math.min(cap, Math.round(Number(n) || 0))); }).slice(0, 10);
   const total = arr.reduce(function (a, b) { return a + b; }, 0);
   if (!total) throw new Error('기록할 횟수가 없어요.');
   recordsSheet_().appendRow([Utilities.getUuid(), new Date(), String(sid), today_(), nowTime_(), ex,
@@ -226,7 +232,7 @@ function getRecordsAdmin(token, limit) {
   admin_(token);
   const names = {}; studentRows_().forEach(function (s) { names[s.id] = s.name; });
   return recordRows_().slice(-Math.max(1, Math.min(500, Number(limit) || 200))).reverse()
-    .map(function (r) { r.name = names[r.sid] || '(지운 학생)'; r.exName = EXERCISES_[r.ex] || r.ex; return r; });
+    .map(function (r) { r.name = names[r.sid] || '(지운 학생)'; r.exName = EXERCISES_[r.ex] || r.ex; r.unit = unitName_(r.ex); return r; });
 }
 function deleteRecord(token, id) {
   admin_(token);
@@ -239,7 +245,7 @@ function deleteRecord(token, id) {
 function ping() { return { shell: SHELL_VERSION, appUrl: APP_URL, title: ss_().getName() }; }
 function getPublic() {
   const s = settings_();
-  return { shell: SHELL_VERSION, className: s.className, reps: s.reps, sets: s.sets, rest: s.rest, dayLimit: s.dayLimit, message: s.message };
+  return { shell: SHELL_VERSION, className: s.className, reps: s.reps, sets: s.sets, rest: s.rest, dayLimit: s.dayLimit, plankSec: s.plankSec, message: s.message };
 }
 function getDashboard() {
   const students = studentRows_(), recs = recordRows_(), t = today_();
@@ -251,9 +257,10 @@ function getDashboard() {
   let todayCount = 0;
   recs.forEach(function (r) {
     const s = by[r.sid]; if (!s) return;
-    s.total += r.total; s.days[r.date] = true;
-    if (r.date >= monday) s.week += r.total;
-    if (r.date === t) { s.today += r.total; todayCount++; todayList.push({ time: r.time, name: s.name, ex: EXERCISES_[r.ex] || r.ex, reps: r.reps, total: r.total }); }
+    const u = units_(r.ex, r.total);      // 회 단위(플랭크는 2초 = 1회)로 모아 바다 깊이를 셈
+    s.total += u; s.days[r.date] = true;
+    if (r.date >= monday) s.week += u;
+    if (r.date === t) { s.today += u; todayCount++; todayList.push({ time: r.time, name: s.name, ex: EXERCISES_[r.ex] || r.ex, reps: r.reps, total: r.total, unit: unitName_(r.ex) }); }
   });
   const list = students.map(function (s) {
     const b = by[s.id];
@@ -294,7 +301,7 @@ function roomSendTask(token, task) {
   const c = roomCode_(); if (!c) throw new Error('먼저 운동방을 열어 주세요.');
   const o = task || {};
   if (!EXERCISES_[o.ex]) throw new Error('알 수 없는 운동이에요.');
-  const t = { id: Utilities.getUuid().slice(0, 8), ex: o.ex, reps: Math.max(1, Math.min(100, Number(o.reps) || 10)),
+  const t = { id: Utilities.getUuid().slice(0, 8), ex: o.ex, reps: Math.max(1, Math.min(o.ex === 'plank' ? 300 : 100, Number(o.reps) || 10)),
     sets: Math.max(1, Math.min(10, Number(o.sets) || 3)), rest: Math.max(5, Math.min(300, Number(o.rest) || 10)), at: Date.now() };
   cache_().put('R_' + c + '_task', JSON.stringify(t), ROOM_TTL_SEC);
   cache_().put('ROOM_CODE', c, ROOM_TTL_SEC);

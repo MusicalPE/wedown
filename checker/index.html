@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.7.3</title>
+<title>위 Down 맨몸 판정기 v0.7.4</title>
 <link rel="icon" type="image/png" href="../icons/favicon-64.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
@@ -223,6 +223,18 @@
     body.running .main{padding:10px 8px}
     body.running .count{font-size:min(14vh,26vw)}
     .cdNum{font-size:min(16vh,26vw)} .cdLab{font-size:16px} .cdSub{font-size:12px} #cdSkip{min-height:40px;padding:6px 12px;font-size:13px;margin-top:8px}
+  }
+  /* ---------- 세로로 세운 핸드폰 — 내 모습을 세로로 길게(머리부터 발끝까지), 옆에 횟수 ---------- */
+  @media (max-width:700px) and (orientation:portrait){
+    .stage{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:stretch;margin:0}
+    .camSlot{align-items:stretch;justify-content:stretch}
+    .pip{width:100%;height:max(300px,calc(100dvh - 450px));aspect-ratio:auto}
+    .main{justify-content:center}
+    .count{font-size:min(13vh,20vw)}
+    body.running .stage{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)}
+    body.running .pip{width:100%;height:max(320px,calc(100dvh - 150px))}
+    body.running .count{font-size:min(12vh,17vw)}
+    body.running .pipCount{font-size:clamp(28px,6vh,48px)}
   }
 </style>
 </head>
@@ -867,7 +879,7 @@ WallPushJudge.prototype.state=function(){ const s=Counter.prototype.state.call(t
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.7.3', REP_M=0.4;
+const VER='0.7.4', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
@@ -994,7 +1006,7 @@ function fitCam(){ const w=video.videoWidth, h=video.videoHeight; if(w&&h) docum
 async function openCam(){
   if(stream) stream.getTracks().forEach(t=>t.stop());
   const land=innerWidth>innerHeight;
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:land?640:480},height:{ideal:land?480:640},frameRate:{ideal:30}},audio:false});
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:land?640:480},height:{ideal:land?480:640},aspectRatio:{ideal:land?4/3:3/4},frameRate:{ideal:30}},audio:false});
   video.srcObject=stream; await video.play();
   fitCam(); video.onresize=fitCam;
   $('nocam').hidden=true;

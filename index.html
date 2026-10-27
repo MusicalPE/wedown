@@ -377,7 +377,7 @@ function showSetup(msg){
     '<p class="hint">학교 시트에 껍데기(Shell.gs)를 배포하고 나온 웹 앱 주소(<b>…/exec</b>)를 붙여넣어 주세요. 배포 주소를 열면 나오는 "프로그램 열기"로 들어와도 돼요.</p>' +
     '<label class="f">웹 앱 주소<input id="setupUrl" placeholder="https://script.google.com/macros/s/…/exec" value="' + esc(APP.shell) + '"></label>' +
     '<button class="btn primary" id="setupGo">연결하기</button>' +
-    '<p class="hint">카메라 판정기만 써 보려면 <a href="checker/">맨몸 판정기</a>를 바로 열어도 돼요.</p></div></div></div>';
+    '<p class="hint">카메라 판정기만 써 보려면 <a href="checker/">맨몸 판정기</a>를 바로 열어도 돼요. 카메라 미니게임은 <a href="games/">바다 놀이터</a>에 있어요.</p></div></div></div>';
   $('setupGo').onclick = function(){ const u = $('setupUrl').value.trim(); if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u) && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(u)) { alert('…/exec 로 끝나는 구글 스크립트 웹 앱 주소인지 확인해 주세요.'); return; } APP.shell = u; try { localStorage.setItem('wd_shell', u); } catch (e) {} location.href = link('main'); };
 }
 
@@ -425,6 +425,7 @@ function renderMain(d){
       '<button class="pill" id="mainQrBtn">학생 QR</button>' +
       '<a class="pill solid" href="' + link('room') + '">운동방 열기</a>' +
       '<a class="pill" href="checker/">판정기만 쓰기</a>' +
+      '<a class="pill" href="games/">바다 놀이터</a>' +
       '<a class="pill" href="' + link('admin') + '">관리자</a></header>' +
     '<div class="note"><div><div class="ne">오늘의 한마디</div><p>' + esc(msg) + '</p></div><div class="nstat"><span>등록 학생 <b>' + students.length + '</b>명</span><span>오늘 기록 <b>' + d.todayCount + '</b>건</span></div></div>' +
     '<div class="hero">' +

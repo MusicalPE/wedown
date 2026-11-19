@@ -41,6 +41,7 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,4.2vw,54px);l
 h1 span{color:var(--sea)}
 .sub{margin:6px 0 0;color:var(--muted);font-size:clamp(14px,1.3vw,16px);line-height:1.55}
 .cam{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.helprow{display:flex;justify-content:flex-end;margin:0 0 -6px}
 .pill{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:99px;border:1px solid #9CC6D4;font-size:14px;font-weight:700;color:var(--navy);text-decoration:none;background:var(--card)}
 .pill:hover{border-color:var(--sea)}
 .chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:99px;border:1px solid #9CC6D4;font-size:14px;font-weight:700;color:var(--navy)}
@@ -134,6 +135,7 @@ footer b{color:var(--navy)}
 
 <div id="menu">
   <div class="wrap">
+    <div class="helprow"><button class="wdhelp-btn" type="button" data-wdhelp><span class="wdhelp-qm" aria-hidden="true">?</span>사용 안내</button></div>
     <header class="top">
       <div class="brand">
         <svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" rx="44" fill="#FFFFFF"/><path d="M12 180 Q31 172 50 180 T88 180 T126 180 T164 180 T190 177" stroke="#5FB8D6" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M40 42 V150 L100 90" stroke="#0E3A63" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M18 128 L40 150" stroke="#0E3A63" stroke-width="22" stroke-linecap="round" fill="none"/><path d="M100 90 L160 150 V50" stroke="#139AAE" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M138 72 L160 50 L182 72" stroke="#139AAE" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
@@ -144,7 +146,6 @@ footer b{color:var(--navy)}
         </div>
       </div>
       <div class="cam">
-        <button class="wdhelp-btn" type="button" data-wdhelp><span class="wdhelp-qm" aria-hidden="true">?</span>사용 안내</button>
         <a class="pill" href="../">위 Down 메인</a>
         <a class="pill" href="../checker/">맨몸 판정기</a>
         <span class="chip" id="camChip"><span class="dot"></span><span id="camText">카메라 꺼짐</span></span>

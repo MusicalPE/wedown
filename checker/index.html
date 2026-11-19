@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.8.0</title>
+<title>위 Down 맨몸 판정기 v0.8.1</title>
 <meta name="description" content="맨몸 판정기 · 제대로 한 동작만 세요. 스쿼트·점핑잭·플랭크 등 13가지 · 영상은 기기 안에서만">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="위 Down">
@@ -117,6 +117,7 @@
   .cover.hide{display:none}
   .coverCard{max-width:620px;width:100%;padding:30px 30px 26px;display:flex;flex-direction:column;gap:16px;position:relative}
   .coverHelp{position:absolute;top:10px;right:12px}
+  .helpsep{width:1px;align-self:stretch;margin:6px 2px;background:var(--line)}
   .brand{display:flex;align-items:center;gap:14px}
   .brand svg{width:64px;height:64px;flex:none}
   .brand .eyebrow{font-size:13px;font-weight:700;color:var(--sea-ink)}
@@ -288,7 +289,6 @@
       <span class="sub" id="sub">제대로 한 만큼만 세어요</span>
     </div>
     <div class="spacer"></div>
-    <button class="wdhelp-btn" type="button" data-wdhelp><span class="wdhelp-qm" aria-hidden="true">?</span>사용 안내</button>
     <div class="tabs" role="group" aria-label="운동 고르기">
       <div class="grow" id="grpRow"></div>
       <div class="erow" id="exRow"></div>
@@ -297,6 +297,7 @@
     <button class="hbtn" id="btnLog">기록장</button>
     <button class="hbtn" id="btnFull">전체 화면</button>
     <button class="hbtn" id="btnFlip">카메라 전환</button>
+    <span class="helpsep"></span><button class="wdhelp-btn" type="button" data-wdhelp><span class="wdhelp-qm" aria-hidden="true">?</span>사용 안내</button>
   </header>
 
   <main class="stage">
@@ -916,7 +917,7 @@ WallPushJudge.prototype.state=function(){ const s=Counter.prototype.state.call(t
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.8.0', REP_M=0.4;
+const VER='0.8.1', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={

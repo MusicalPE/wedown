@@ -210,6 +210,7 @@
   .anav .nsep{height:1px;background:var(--line);margin:6px 4px}
   .anav .wdhelp-btn{justify-content:flex-start;padding:0 12px;margin-top:4px;color:var(--ink);font-weight:700;width:100%;min-height:44px;border-radius:12px}
   .cardtop{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .helprow{display:flex;justify-content:flex-end;margin:0 0 -10px}
   .anav a{color:var(--muted);font-size:13px;font-weight:700;text-decoration:none;padding:8px 12px}
   .anav a:hover{color:var(--sea-ink)}
   .acontent{flex:1;min-width:0}
@@ -271,7 +272,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.10.0', NEED_SHELL = 4, REP_M = 0.4;
+const VER = '0.10.1', NEED_SHELL = 4, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
@@ -369,6 +370,8 @@ function rpc(fn, args, retried){
 
 const LOGO = '<svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" rx="44" fill="#FFFFFF"/><path d="M12 180 Q31 172 50 180 T88 180 T126 180 T164 180 T190 177" stroke="#5FB8D6" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M40 42 V150 L100 90" stroke="#0E3A63" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M18 128 L40 150" stroke="#0E3A63" stroke-width="22" stroke-linecap="round" fill="none"/><path d="M100 90 L160 150 V50" stroke="#139AAE" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M138 72 L160 50 L182 72" stroke="#139AAE" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
 // 카드 화면 맨 위: 로고 + 오른쪽에 사용 안내
+// 메뉴 줄과 따로, 오른쪽 위에 사용 안내 (사야지!와 같은 자리)
+function helpRow(){ return '<div class="helprow">' + window.WD_HELP.btn() + '</div>'; }
 function cardTop(b){ return '<div class="cardtop">' + b + window.WD_HELP.btn() + '</div>'; }
 function brand(sub){ return '<a class="brand" href="' + link('main') + '">' + LOGO + '<b>우리 Down</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</a>'; }
 
@@ -430,7 +433,7 @@ function renderMain(d){
   const msg = st.message || MESSAGES[new Date().getDate() % MESSAGES.length];
   $('app').innerHTML =
   '<div class="surface"><div class="wrap">' +
-    '<header class="top">' + brand(st.className) + '<span class="sp"></span>' + window.WD_HELP.btn() +
+    helpRow() + '<header class="top">' + brand(st.className) + '<span class="sp"></span>' +
       '<button class="pill" id="mainQrBtn">학생 QR</button>' +
       '<a class="pill solid" href="' + link('room') + '">운동방 열기</a>' +
       '<a class="pill" href="checker/">판정기만 쓰기</a>' +
@@ -662,7 +665,7 @@ function renderRoomShell(){
   const opt = function(list, v, unit){ return list.map(function(x){ return '<option value="' + x + '"' + (Number(v) === x ? ' selected' : '') + '>' + x + unit + '</option>'; }).join(''); };
   const joinUrl = link('join', { code: ROOM.code });
   $('app').innerHTML = '<div class="page"><div class="wrap">' +
-  '<header class="top">' + brand(s.className + ' 운동방') + '<span class="sp"></span>' + window.WD_HELP.btn() + '<b id="joinedCount" style="color:var(--sea-ink)"></b><a class="pill" href="' + link('main') + '">메인 보기</a><button class="pill" id="closeRoom">방 닫기</button></header>' +
+  helpRow() + '<header class="top">' + brand(s.className + ' 운동방') + '<span class="sp"></span><b id="joinedCount" style="color:var(--sea-ink)"></b><a class="pill" href="' + link('main') + '">메인 보기</a><button class="pill" id="closeRoom">방 닫기</button></header>' +
   '<div class="grid2"><div class="side">' +
     '<section class="card" style="display:flex;flex-direction:column;gap:10px;text-align:center"><h2>휴대폰으로 찍고 들어와요</h2><div class="qr" id="roomQr"></div><div class="hint">방 번호</div><div class="code">' + ROOM.code.split('').join(' ') + '</div><p class="hint">메인 화면 주소 뒤에 들어오거나, 입장 화면에서 방 번호를 넣어도 돼요</p></section>' +
     '<section class="card" style="display:flex;flex-direction:column;gap:12px"><h2>과제 보내기</h2>' +

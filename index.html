@@ -210,7 +210,8 @@
   .anav .nsep{height:1px;background:var(--line);margin:6px 4px}
   .anav .wdhelp-btn{justify-content:flex-start;padding:0 12px;margin-top:4px;color:var(--ink);font-weight:700;width:100%;min-height:44px;border-radius:12px}
   .cardtop{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-  .helprow{display:flex;justify-content:flex-end;margin:0 0 -10px}
+  /* 사용 안내: 점퍼스처럼 메뉴 줄 맨 끝(오른쪽)에 조금 떼어서, 휴대폰에서는 마지막 줄 오른쪽 끝으로 */
+  header.top .helpend{margin-left:14px}
   .anav a{color:var(--muted);font-size:13px;font-weight:700;text-decoration:none;padding:8px 12px}
   .anav a:hover{color:var(--sea-ink)}
   .acontent{flex:1;min-width:0}
@@ -259,6 +260,7 @@
     .anav .nsep,.anav a{display:none} .anav .wdhelp-btn{width:auto;margin-top:0}
   }
   @media (max-width:700px){
+    header.top .helpend{margin-left:auto}
     .surface,.abyss,.page{padding-left:12px;padding-right:12px} .ropes{padding:14px 10px} #mainQrBtn{display:none}
     .brand b{font-size:22px} .brand svg{width:38px;height:38px}
     .gauge{gap:8px;flex-wrap:nowrap} .ruler{width:34px} .rlabels{width:92px;font-size:11.5px;line-height:1.2} .rlabels span{white-space:normal} .rlabels b{display:block} .rlabels span:first-child{top:0!important;transform:none} .rlabels span:last-child{transform:translateY(-100%)} .depthbig{flex:1;gap:6px} .depthbig .k{font-size:14px} .depthbig .v{font-size:58px} .depthbig .n{font-size:14px;word-break:keep-all} .depthbig .s{font-size:12px;word-break:keep-all}
@@ -272,7 +274,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '1.0.1', NEED_SHELL = 4, REP_M = 0.4;
+const VER = '1.0.2', NEED_SHELL = 4, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
@@ -370,8 +372,6 @@ function rpc(fn, args, retried){
 
 const LOGO = '<svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" rx="44" fill="#FFFFFF"/><path d="M12 180 Q31 172 50 180 T88 180 T126 180 T164 180 T190 177" stroke="#5FB8D6" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M40 42 V150 L100 90" stroke="#0E3A63" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M18 128 L40 150" stroke="#0E3A63" stroke-width="22" stroke-linecap="round" fill="none"/><path d="M100 90 L160 150 V50" stroke="#139AAE" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M138 72 L160 50 L182 72" stroke="#139AAE" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
 // 카드 화면 맨 위: 로고 + 오른쪽에 사용 안내
-// 메뉴 줄과 따로, 오른쪽 위에 사용 안내 (사야지!와 같은 자리)
-function helpRow(){ return '<div class="helprow">' + window.WD_HELP.btn() + '</div>'; }
 function cardTop(b){ return '<div class="cardtop">' + b + window.WD_HELP.btn() + '</div>'; }
 function brand(sub){ return '<a class="brand" href="' + link('main') + '">' + LOGO + '<b>우리 Down</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</a>'; }
 
@@ -433,12 +433,12 @@ function renderMain(d){
   const msg = st.message || MESSAGES[new Date().getDate() % MESSAGES.length];
   $('app').innerHTML =
   '<div class="surface"><div class="wrap">' +
-    helpRow() + '<header class="top">' + brand(st.className) + '<span class="sp"></span>' +
+    '<header class="top">' + brand(st.className) + '<span class="sp"></span>' +
       '<button class="pill" id="mainQrBtn">학생 QR</button>' +
       '<a class="pill solid" href="' + link('room') + '">운동방 열기</a>' +
       '<a class="pill" href="checker/">판정기만 쓰기</a>' +
       '<a class="pill" href="games/">바다 놀이터</a>' +
-      '<a class="pill" href="' + link('admin') + '">관리자</a></header>' +
+      '<a class="pill" href="' + link('admin') + '">관리자</a>' + window.WD_HELP.btn('helpend') + '</header>' +
     '<div class="note"><div><div class="ne">오늘의 한마디</div><p>' + esc(msg) + '</p></div><div class="nstat"><span>등록 학생 <b>' + students.length + '</b>명</span><span>오늘 기록 <b>' + d.todayCount + '</b>건</span></div></div>' +
     '<div class="hero">' +
     '<div class="tri top">' +
@@ -665,7 +665,7 @@ function renderRoomShell(){
   const opt = function(list, v, unit){ return list.map(function(x){ return '<option value="' + x + '"' + (Number(v) === x ? ' selected' : '') + '>' + x + unit + '</option>'; }).join(''); };
   const joinUrl = link('join', { code: ROOM.code });
   $('app').innerHTML = '<div class="page"><div class="wrap">' +
-  helpRow() + '<header class="top">' + brand(s.className + ' 운동방') + '<span class="sp"></span><b id="joinedCount" style="color:var(--sea-ink)"></b><a class="pill" href="' + link('main') + '">메인 보기</a><button class="pill" id="closeRoom">방 닫기</button></header>' +
+  '<header class="top">' + brand(s.className + ' 운동방') + '<span class="sp"></span><b id="joinedCount" style="color:var(--sea-ink)"></b><a class="pill" href="' + link('main') + '">메인 보기</a><button class="pill" id="closeRoom">방 닫기</button>' + window.WD_HELP.btn('helpend') + '</header>' +
   '<div class="grid2"><div class="side">' +
     '<section class="card" style="display:flex;flex-direction:column;gap:10px;text-align:center"><h2>휴대폰으로 찍고 들어와요</h2><div class="qr" id="roomQr"></div><div class="hint">방 번호</div><div class="code">' + ROOM.code.split('').join(' ') + '</div><p class="hint">메인 화면 주소 뒤에 들어오거나, 입장 화면에서 방 번호를 넣어도 돼요</p></section>' +
     '<section class="card" style="display:flex;flex-direction:column;gap:12px"><h2>과제 보내기</h2>' +

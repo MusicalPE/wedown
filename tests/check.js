@@ -98,6 +98,8 @@ else if (readmeTop && school !== readmeTop) err('판 번호 다름: 학교 화�
 else ok('학교 화면 판 번호 ' + school + ' = README');
 if (ckVer !== ckTitle) err('판정기 판 번호 다름: VER ' + ckVer + ' / 제목 v' + ckTitle); else ok('판정기 VER = 제목 (' + ckVer + ')');
 if (ckReadme && ckVer !== ckReadme) err('판 번호 다름: 판정기 ' + ckVer + ' / README 판정기 마지막 기록 v' + ckReadme); else ok('판정기 판 번호 = README');
+// 판 번호 규칙(다른 앱과 같음): 단순 변경은 세 번째 숫자, 기능은 두 번째 숫자, 두 번째가 9에서 10이 되면 앞 번호를 올림
+[['학교 화면', school], ['판정기', ckVer]].forEach(([n, v]) => { if (v && +v.split('.')[1] > 9) err(n + ' 판 번호 ' + v + ': 두 번째 숫자가 10이 되면 앞 번호를 올려요 (예: 0.9.x → 1.0.0)'); else if (v) ok(n + ' 판 번호 규칙'); });
 if (need !== shellV) err('껍데기 판 다름: 화면이 바라는 판 ' + need + ' / Shell.gs ' + shellV); else ok('껍데기 판 ' + shellV + ' = 화면이 바라는 판');
 const shellInRd = (rd.match(/껍데기 (\d+)판/g) || []).map(x => +x.match(/\d+/)[0]).sort((a, b) => a - b).pop();
 if (shellInRd && shellInRd !== shellV) err('껍데기 판 다름: README ' + shellInRd + '판 / Shell.gs ' + shellV + '판'); else ok('껍데기 판 = README');

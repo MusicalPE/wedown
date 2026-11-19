@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>위 Down 맨몸 판정기 v0.7.5</title>
+<title>위 Down 맨몸 판정기 v0.8.0</title>
 <meta name="description" content="맨몸 판정기 · 제대로 한 동작만 세요. 스쿼트·점핑잭·플랭크 등 13가지 · 영상은 기기 안에서만">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="위 Down">
@@ -15,6 +15,8 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="../icons/favicon-64.png">
+<script src="../help.js"></script>
+<script src="../demo.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
   :root{
@@ -113,7 +115,8 @@
 
   .cover{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:20px;overflow:auto}
   .cover.hide{display:none}
-  .coverCard{max-width:620px;width:100%;padding:30px 30px 26px;display:flex;flex-direction:column;gap:16px}
+  .coverCard{max-width:620px;width:100%;padding:30px 30px 26px;display:flex;flex-direction:column;gap:16px;position:relative}
+  .coverHelp{position:absolute;top:10px;right:12px}
   .brand{display:flex;align-items:center;gap:14px}
   .brand svg{width:64px;height:64px;flex:none}
   .brand .eyebrow{font-size:13px;font-weight:700;color:var(--sea-ink)}
@@ -285,6 +288,7 @@
       <span class="sub" id="sub">제대로 한 만큼만 세어요</span>
     </div>
     <div class="spacer"></div>
+    <button class="wdhelp-btn" type="button" data-wdhelp><span class="wdhelp-qm" aria-hidden="true">?</span>사용 안내</button>
     <div class="tabs" role="group" aria-label="운동 고르기">
       <div class="grow" id="grpRow"></div>
       <div class="erow" id="exRow"></div>
@@ -377,6 +381,7 @@
 
 <div class="cover" id="cover">
   <div class="card coverCard">
+    <div class="coverHelp"><button class="wdhelp-btn" type="button" data-wdhelp><span class="wdhelp-qm" aria-hidden="true">?</span>사용 안내</button></div>
     <div class="brand">
       <svg viewBox="0 0 200 200" aria-hidden="true">
         <rect width="200" height="200" rx="44" fill="#F1F8FB"/>
@@ -911,7 +916,7 @@ WallPushJudge.prototype.state=function(){ const s=Counter.prototype.state.call(t
 /*JUDGE-END*/
 
 /* ===================== 화면 ===================== */
-const VER='0.7.5', REP_M=0.4;
+const VER='0.8.0', REP_M=0.4;
 const $=id=>document.getElementById(id);
 $('ver').textContent='v'+VER;
 const EX={
@@ -958,9 +963,12 @@ const TIMED={plank:1,balance:1}; const isT=x=>!!TIMED[x||ex];   // 시간으로 
 let ex=EXS.indexOf(Q.get('ex'))>0?Q.get('ex'):'squat', level='normal';
 /* 학교 연결 모드: 학교 메인·운동방에서 이름을 골라 열면 s(학교 시트)·sid(학생)·계획이 주소에 실려 옴 */
 const LINK={s:Q.get('s')||'', sid:Q.get('sid')||'', name:Q.get('name')||'', room:Q.get('room')||'', task:Q.get('task')||'', back:''};
-LINK.on=/^https:\/\/script\.google\.com\/|^http:\/\/(localhost|127\.0\.0\.1)/.test(LINK.s)&&!!LINK.sid;
+LINK.demo=LINK.s==='demo';   // 미리보기(지어낸 학급) — 기록은 이 탭 안에서만
+LINK.on=(LINK.demo||/^https:\/\/script\.google\.com\/|^http:\/\/(localhost|127\.0\.0\.1)/.test(LINK.s))&&!!LINK.sid;
+if(LINK.demo&&window.WD_DEMO) addEventListener('DOMContentLoaded',()=>window.WD_DEMO.bar(true));
 try{ const b=new URL(Q.get('back')||'',location.href); if(b.origin===location.origin) LINK.back=b.toString(); }catch(e){}
 function srpc(fn,args,retried){
+  if(LINK.demo) return window.WD_DEMO.call(fn,args);
   return fetch(LINK.s,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:args||[]}),redirect:'follow'})
     .then(r=>{ if(!r.ok) throw Object.assign(new Error('학교 시트 응답 오류 ('+r.status+')'),{retry:true}); return r.json(); },e=>{ e.retry=true; throw e; })
     .then(j=>{ if(!j.ok) throw new Error(j.error||'요청 실패'); return j.result; })

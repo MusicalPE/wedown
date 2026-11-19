@@ -23,6 +23,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="help.js"></script>
+<script src="demo.js"></script>
 <style>
   :root{
     --sky:#DDF0F5; --sky2:#BFE6EF; --mid:#3D86A8; --deep:#123E63; --abyss:#081C31; --night:#0B2A47;
@@ -206,6 +208,8 @@
   .anav button.on{background:var(--sea-soft);color:var(--navy)}
   .anav button.on i{background:var(--sea)}
   .anav .nsep{height:1px;background:var(--line);margin:6px 4px}
+  .anav .wdhelp-btn{justify-content:flex-start;padding:0 12px;margin-top:4px;color:var(--ink);font-weight:700;width:100%;min-height:44px;border-radius:12px}
+  .cardtop{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
   .anav a{color:var(--muted);font-size:13px;font-weight:700;text-decoration:none;padding:8px 12px}
   .anav a:hover{color:var(--sea-ink)}
   .acontent{flex:1;min-width:0}
@@ -251,7 +255,7 @@
     .alayout{flex-direction:column}
     .anav{width:100%;position:static;flex-direction:row;overflow-x:auto;gap:4px;padding:6px}
     .anav button{width:auto;flex:none;white-space:nowrap}
-    .anav .nsep,.anav a{display:none}
+    .anav .nsep,.anav a{display:none} .anav .wdhelp-btn{width:auto;margin-top:0}
   }
   @media (max-width:700px){
     .surface,.abyss,.page{padding-left:12px;padding-right:12px} .ropes{padding:14px 10px} #mainQrBtn{display:none}
@@ -267,7 +271,7 @@
 
 <script>
 /* ===================== 기본 ===================== */
-const VER = '0.9.0', NEED_SHELL = 4, REP_M = 0.4;
+const VER = '0.10.0', NEED_SHELL = 4, REP_M = 0.4;
 const EXN = { squat: '스쿼트', jack: '점핑잭', lunge: '런지', burpee: '버피', pushup: '팔굽혀펴기', situp: '윗몸일으키기', plank: '플랭크', highknee: '무릎 높이 들기', balance: '외발 서기', climber: '마운틴 클라이머', legraise: '레그 레이즈', wallpush: '벽 팔굽혀펴기', kneepush: '무릎 팔굽혀펴기' };
 const EXK = ['squat', 'jack', 'lunge', 'burpee', 'pushup', 'situp', 'plank', 'highknee', 'balance', 'climber', 'legraise', 'wallpush', 'kneepush'];
 const GROUPS = [['다리·엉덩이', ['squat', 'lunge']], ['팔·가슴', ['wallpush', 'kneepush', 'pushup']], ['배(코어)', ['situp', 'legraise', 'plank']], ['균형', ['balance']], ['유산소', ['jack', 'highknee', 'burpee', 'climber']]];
@@ -343,9 +347,11 @@ function installUI(){
     (ev.userChoice || Promise.resolve({})).then(function(r){ window._wdInstall = null; if (r && r.outcome === 'accepted') ui('installed'); else { msg.textContent = '취소했어요. 필요할 때 다시 눌러 주세요.'; ui(); } }); };
   ui();
 }
-(function(){ let s = Q.s || ''; try { if (s) localStorage.setItem('wd_shell', s); else s = localStorage.getItem('wd_shell') || ''; } catch (e) {} APP.shell = s; })();
+// 주소에 ?demo 가 있으면 설치 없이 지어낸 학급으로 둘러보는 미리보기 (demo.js — 이 탭 안에서만 돌고, 진짜 시트에는 아무것도 안 남음)
+const DEMO = ('demo' in Q) || Q.s === 'demo';
+(function(){ if (DEMO) { APP.shell = 'demo'; return; } let s = Q.s || ''; try { if (s) localStorage.setItem('wd_shell', s); else s = localStorage.getItem('wd_shell') || ''; } catch (e) {} APP.shell = s; })();
 const ROOT = location.origin + location.pathname.replace(/index\.html$/, '');
-function link(page, extra){ const u = new URL(ROOT); if (APP.shell) u.searchParams.set('s', APP.shell); if (page && page !== 'main') u.searchParams.set('page', page); Object.keys(extra || {}).forEach(function(k){ if (extra[k] !== '' && extra[k] != null) u.searchParams.set(k, extra[k]); }); return u.toString(); }
+function link(page, extra){ const u = new URL(ROOT); if (DEMO) u.searchParams.set('demo', ''); else if (APP.shell) u.searchParams.set('s', APP.shell); if (page && page !== 'main') u.searchParams.set('page', page); Object.keys(extra || {}).forEach(function(k){ if (extra[k] !== '' && extra[k] != null) u.searchParams.set(k, extra[k]); }); return u.toString(); }
 const $ = function(id){ return document.getElementById(id); };
 const esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
 const fmt = function(n){ return Number(n || 0).toLocaleString('ko-KR'); };
@@ -354,6 +360,7 @@ function store(k, v){ try { if (v === undefined) return sessionStorage.getItem(k
 
 /* 학교 껍데기(Shell.gs)에 요청 — 구글이 잠깐 오류를 내면 한 번 더 */
 function rpc(fn, args, retried){
+  if (DEMO) return window.WD_DEMO.call(fn, args);
   return fetch(APP.shell, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args || [] }), redirect: 'follow' })
     .then(function(r){ if (!r.ok) { const e = new Error('학교 시트 응답 오류 (' + r.status + ')'); e.retry = true; throw e; } return r.json(); }, function(e){ e.retry = true; throw e; })
     .then(function(j){ if (!j.ok) throw new Error(j.error || '요청 실패'); return j.result; })
@@ -361,6 +368,8 @@ function rpc(fn, args, retried){
 }
 
 const LOGO = '<svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" rx="44" fill="#FFFFFF"/><path d="M12 180 Q31 172 50 180 T88 180 T126 180 T164 180 T190 177" stroke="#5FB8D6" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M40 42 V150 L100 90" stroke="#0E3A63" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M18 128 L40 150" stroke="#0E3A63" stroke-width="22" stroke-linecap="round" fill="none"/><path d="M100 90 L160 150 V50" stroke="#139AAE" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M138 72 L160 50 L182 72" stroke="#139AAE" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+// 카드 화면 맨 위: 로고 + 오른쪽에 사용 안내
+function cardTop(b){ return '<div class="cardtop">' + b + window.WD_HELP.btn() + '</div>'; }
 function brand(sub){ return '<a class="brand" href="' + link('main') + '">' + LOGO + '<b>우리 Down</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</a>'; }
 
 /* 바다 이정표 — 자는 구간마다 길이를 다르게(얕은 바다를 크게 보이게) */
@@ -421,7 +430,7 @@ function renderMain(d){
   const msg = st.message || MESSAGES[new Date().getDate() % MESSAGES.length];
   $('app').innerHTML =
   '<div class="surface"><div class="wrap">' +
-    '<header class="top">' + brand(st.className) + '<span class="sp"></span>' +
+    '<header class="top">' + brand(st.className) + '<span class="sp"></span>' + window.WD_HELP.btn() +
       '<button class="pill" id="mainQrBtn">학생 QR</button>' +
       '<a class="pill solid" href="' + link('room') + '">운동방 열기</a>' +
       '<a class="pill" href="checker/">판정기만 쓰기</a>' +
@@ -497,7 +506,7 @@ function loadMain(){
 /* ===================== 관리자 ===================== */
 function token(){ return store('wd_token') || ''; }
 function needLogin(next, msg){
-  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:12px">' + brand('관리자') +
+  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:12px">' + cardTop(brand('관리자')) +
     '<h2>' + (next === 'room' ? '운동방은 선생님만 열 수 있어요' : '관리자 로그인') + '</h2>' + (msg ? '<div class="warnbox">' + esc(msg) + '</div>' : '') +
     '<label class="f">관리자 비밀번호<input id="pw" type="password" autocomplete="current-password" placeholder="처음 비밀번호는 1234"></label>' +
     '<button class="btn primary" id="login">들어가기</button><span class="err" id="loginErr"></span><a class="pill" href="' + link('main') + '">메인으로</a></div></div></div>';
@@ -523,7 +532,7 @@ function renderAdmin(s, students, records){
   (store('wd_default_pw') ? '<div class="warnbox" style="margin-top:14px">처음 비밀번호(1234)를 쓰고 있어요. <b>비밀번호</b> 메뉴에서 꼭 바꿔 주세요.</div>' : '') +
   '<div class="alayout"><nav class="anav" id="anav">' +
     ADMIN_TABS.map(function(t){ return '<button data-tab="' + t[0] + '"><i></i>' + t[1] + (t[0] === 'students' ? '<em>' + students.length + '</em>' : '') + '</button>'; }).join('') +
-    '<div class="nsep"></div><a href="' + link('room') + '">운동방 열기 →</a><a href="' + link('main') + '">메인 화면 →</a></nav>' +
+    '<div class="nsep"></div><a href="' + link('room') + '">운동방 열기 →</a><a href="' + link('main') + '">메인 화면 →</a>' + window.WD_HELP.btn('anavhelp') + '</nav>' +
   '<div class="acontent">' +
   pane('basic',
     card('학생 접속 주소 · QR', '학생들이 휴대폰·태블릿 카메라로 찍으면 바로 우리 반 메인 화면이 열려요. 새 판이 나와도 주소는 그대로라서 한 번 뽑아 둔 QR을 계속 쓰면 돼요.',
@@ -653,7 +662,7 @@ function renderRoomShell(){
   const opt = function(list, v, unit){ return list.map(function(x){ return '<option value="' + x + '"' + (Number(v) === x ? ' selected' : '') + '>' + x + unit + '</option>'; }).join(''); };
   const joinUrl = link('join', { code: ROOM.code });
   $('app').innerHTML = '<div class="page"><div class="wrap">' +
-  '<header class="top">' + brand(s.className + ' 운동방') + '<span class="sp"></span><b id="joinedCount" style="color:var(--sea-ink)"></b><a class="pill" href="' + link('main') + '">메인 보기</a><button class="pill" id="closeRoom">방 닫기</button></header>' +
+  '<header class="top">' + brand(s.className + ' 운동방') + '<span class="sp"></span>' + window.WD_HELP.btn() + '<b id="joinedCount" style="color:var(--sea-ink)"></b><a class="pill" href="' + link('main') + '">메인 보기</a><button class="pill" id="closeRoom">방 닫기</button></header>' +
   '<div class="grid2"><div class="side">' +
     '<section class="card" style="display:flex;flex-direction:column;gap:10px;text-align:center"><h2>휴대폰으로 찍고 들어와요</h2><div class="qr" id="roomQr"></div><div class="hint">방 번호</div><div class="code">' + ROOM.code.split('').join(' ') + '</div><p class="hint">메인 화면 주소 뒤에 들어오거나, 입장 화면에서 방 번호를 넣어도 돼요</p></section>' +
     '<section class="card" style="display:flex;flex-direction:column;gap:12px"><h2>과제 보내기</h2>' +
@@ -710,12 +719,12 @@ function loadJoin(){
   }).catch(function(e){ store('wd_join_code', null); askCode(e.message); });
 }
 function askCode(msg){
-  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:12px">' + brand('운동방') + '<h2>방 번호를 넣어요</h2>' + (msg ? '<div class="warnbox">' + esc(msg) + '</div>' : '') +
+  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:12px">' + cardTop(brand('운동방')) + '<h2>방 번호를 넣어요</h2>' + (msg ? '<div class="warnbox">' + esc(msg) + '</div>' : '') +
     '<label class="f">방 번호 (네 자리)<input id="code" inputmode="numeric" maxlength="4" style="font-size:28px;text-align:center;letter-spacing:.2em"></label><button class="btn primary" id="enter">들어가기</button></div></div></div>';
   $('enter').onclick = function(){ const c = $('code').value.trim(); if (!/^\d{4}$/.test(c)) return; Q.code = c; loadJoin(); };
 }
 function pickName(info){
-  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:12px">' + brand(info.className + ' 운동방') + '<h2>내 이름을 골라요</h2>' +
+  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:12px">' + cardTop(brand(info.className + ' 운동방')) + '<h2>내 이름을 골라요</h2>' +
     nameGrid(info.students, '') + '<div id="pwStep" style="display:none;flex-direction:column;gap:10px"><p class="hint" id="pwWho"></p><input class="pwin" id="joinPw" type="password" inputmode="numeric" autocomplete="off" placeholder="내 비밀번호"><button class="btn primary" id="pwGo">들어가기</button></div><span class="err" id="joinErr"></span></div></div></div>';
   bindPick(function(){ pickName(info); });
   if ($('pickS')) $('pickS').onchange = function(){
@@ -741,7 +750,7 @@ function showJoin(r){
   if (!t) body = '<div class="wait"><i></i>선생님이 과제를 보내면 시작해요</div>';
   else if (mine && me.finished) body = '<div class="bigtask">끝! 잘했어요</div><p class="hint" style="text-align:center">' + taskText(t) + '를 다 했어요. 다음 과제를 기다려요.</p><div class="wait"><i></i>다음 과제 기다리는 중</div>';
   else body = '<p class="hint" style="text-align:center">선생님이 보낸 과제</p><div class="bigtask">' + EXN[t.ex] + '<br>' + (isT(t.ex) ? secLabel(t.reps) : t.reps + '회') + ' × ' + t.sets + '세트</div><p class="hint" style="text-align:center">쉬는 시간 ' + t.rest + '초' + (mine && me.setsDone ? ' · 지난번에 ' + me.setsDone + '세트까지 했어요' : '') + '</p><button class="btn sea" id="startTask" style="min-height:60px;font-size:20px">카메라로 시작하기</button>';
-  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:14px">' + brand('운동방 ' + JOIN.code) +
+  $('app').innerHTML = '<div class="page"><div class="wrap center"><div class="card" style="display:flex;flex-direction:column;gap:14px">' + cardTop(brand('운동방 ' + JOIN.code)) +
     '<div style="display:flex;justify-content:space-between;align-items:center"><h2>' + esc(JOIN.name) + '</h2><button class="pill" id="notMe">내가 아니에요</button></div>' + body + '</div>' +
     peersCard(r.peers || [], t) + '</div></div>';
   $('notMe').onclick = function(){ store('wd_join_pw', null); store('wd_join_sid', null); store('wd_join_name', null); JOIN.sid = ''; loadJoin(); };
@@ -761,6 +770,7 @@ function peersCard(peers, t){
 
 /* ===================== 길 찾기 ===================== */
 function route(){
+  if (DEMO && window.WD_DEMO) window.WD_DEMO.bar();
   if (!APP.shell) return showSetup('');
   const p = Q.page || 'main';
   if (p === 'admin') return loadAdmin();

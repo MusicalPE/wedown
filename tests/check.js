@@ -32,7 +32,7 @@ for (const f of PAGES) {
   const odd = tags.filter(t => ((t.match(/"/g) || []).length % 2) === 1);
   if (odd.length) err(f + ' 태그 따옴표 짝 안 맞음: ' + odd.slice(0, 2).join(' | ')); else ok(f + ' 태그 따옴표 짝');
 }
-for (const f of ['Shell.gs', 'sw.js']) if (syntax(read(f), f)) ok(f + ' 문법');
+for (const f of ['Shell.gs', 'sw.js', 'help.js', 'demo.js']) if (syntax(read(f), f)) ok(f + ' 문법');
 try { JSON.parse(read('manifest.webmanifest')); ok('manifest.webmanifest 형식'); } catch (e) { err('manifest.webmanifest 형식 오류: ' + e.message); }
 
 // ② 단추 → 함수·칸
@@ -68,6 +68,19 @@ for (const f of PAGES) {
   const dup = Object.keys(cnt).filter(k => cnt[k] > 1);
   if (dup.length) err(f + ' 같은 id 가 두 번 이상: ' + dup.join(', ')); else ok(f + ' id 겹침 없음');
 }
+
+// 사용 안내: 모든 화면이 help.js 를 불러오고 단추를 두는지
+for (const f of PAGES) {
+  const h = read(f);
+  if (!/<script src="(\.\.\/)?help\.js"><\/script>/.test(h)) err(f + ' 사용 안내(help.js)를 불러오지 않음');
+  else if (!/data-wdhelp|WD_HELP\.btn\(/.test(h)) err(f + ' 사용 안내 단추가 없음');
+  else ok(f + ' 사용 안내 단추');
+}
+{ const hj = read('help.js'); const n = (hj.match(/^\s{4}\['/gm) || []).length;
+  if (n < 6 || n > 9) err('사용 안내 항목 수가 6~9개가 아님: ' + n); else ok('사용 안내 항목 ' + n + '개');
+  // 다른 화면의 class 이름과 겹치지 않게 wdhelp- 로 시작
+  const cls = (hj.match(/\.([a-z][\w-]*)\{/g) || []).map(s => s.slice(1, -1)).filter(c => !/^wdhelp-/.test(c));
+  if (cls.length) err('사용 안내 class 이름이 wdhelp- 로 시작하지 않음: ' + [...new Set(cls)].join(', ')); else ok('사용 안내 class 이름 겹침 없음'); }
 
 // ③ 판 번호
 const idx = read('index.html'), ck = read('checker/index.html'), gs = read('Shell.gs'), rd = read('README.md');
